@@ -1,0 +1,11 @@
+*
+!.gitignore
+!README.md
+!requirements.txt
+!src/
+!src/**
+!scripts/
+!scripts/**
+__pycache__/
+*.pyc
+.DS_Store
