@@ -161,7 +161,12 @@ def evaluate():
 def save(name):
     torch.save({"model": model.state_dict(), "config": cfg.to_dict(), "args": vars(a)}, os.path.join(a.out_dir, name))
 
-json.dump({"args": vars(a), "params": n_par, "val_songs": sorted(val_names)}, open(os.path.join(a.out_dir, "run_config.json"), "w"))
+import hashlib, transformers
+_sha = lambda f: hashlib.sha256(open(f, "rb").read()).hexdigest()[:16]
+json.dump({"args": vars(a), "params": n_par, "val_songs": sorted(val_names),
+           "provenance": {"train_uncond.py": _sha(os.path.abspath(__file__)), "tok2idx": _sha(a.tok2idx), "sequences": _sha(a.sequences),
+                          "torch": torch.__version__, "transformers": transformers.__version__}},
+          open(os.path.join(a.out_dir, "run_config.json"), "w"), indent=1)
 log = open(os.path.join(a.out_dir, "log.jsonl"), "a")
 best, t0 = 1e9, time.time()
 model.train()

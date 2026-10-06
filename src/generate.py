@@ -6,7 +6,7 @@ import argparse, json, os, bisect
 import numpy as np
 import torch
 import pretty_midi
-from transformers import GPT2Config, GPT2LMHeadModel, StoppingCriteria, StoppingCriteriaList
+from transformers import GPT2Config, GPT2LMHeadModel, StoppingCriteria, StoppingCriteriaList, LogitsProcessor, LogitsProcessorList
 
 
 def detokenize(tokens, p, out_name="PIANO"):
@@ -52,10 +52,20 @@ def detokenize(tokens, p, out_name="PIANO"):
 
 
 class BarStop(StoppingCriteria):
-    def __init__(self, bar_id, target):
-        self.bar_id, self.target = bar_id, target
+    """stop a row once (bars in its context + bars already dropped from the context) >= target"""
+    def __init__(self, bar_id, target, offsets):
+        self.bar_id, self.target, self.offsets = bar_id, target, offsets
     def __call__(self, input_ids, scores, **kw):
-        return (input_ids == self.bar_id).sum(1) >= self.target
+        return ((input_ids == self.bar_id).sum(1) + self.offsets) >= self.target
+
+
+class NoSpecial(LogitsProcessor):
+    """never sample <PAD>/<BOS>/<EOS>: a piece always continues until it has the requested bars"""
+    def __init__(self, ids):
+        self.ids = ids
+    def __call__(self, input_ids, scores):
+        scores[:, self.ids] = -float("inf")
+        return scores
 
 
 def load_model(ckpt, dev):
@@ -64,28 +74,57 @@ def load_model(ckpt, dev):
     m.load_state_dict(ck["model"]); return m.to(dev).eval(), ck
 
 
+def trim_context(seq, max_len, v):
+    """sliding window: keep <BOS> + a suffix that starts at a Bar token (tempo in effect re-inserted at Pos_0,
+    as in the training crops). Returns (context, number of Bar tokens dropped)."""
+    if len(seq) <= max_len:
+        return seq, 0
+    bars = [i for i, t in enumerate(seq) if t == v["Bar"]]
+    for k in range(1, len(bars)):
+        tail = seq[bars[k]:]
+        if len(tail) + 3 <= max_len:
+            has_t = len(tail) > 2 and tail[1] == v["Pos_0"] and tail[2] in v["tempo_ids"]
+            last_t = [t for t in seq[:bars[k]] if t in v["tempo_ids"]]
+            ins = [v["Pos_0"], last_t[-1]] if (not has_t and last_t) else []
+            return [seq[0]] + tail[:1] + ins + tail[1:], k
+    return None, 0  # a single bar longer than the window: degenerate sample
+
+
 @torch.no_grad()
-def sample(model, prompt_ids, n, n_bars, bar_id, pad_id, temperature, top_k, top_p, ctx, max_rounds=20, batch=20):
-    """Return n token-id lists, each containing exactly n_bars bars after the prompt's own bars."""
+def sample(model, prompt_ids, n, n_bars, v, temperature, top_k, top_p, ctx, chunk=1024, max_new=48000):
+    """n pieces with exactly n_bars bars (prompt bars included). Context slides in `chunk`-token steps so no
+    sample is rejected. Returns (token-id lists, stats)."""
     dev = next(model.parameters()).device
-    out, tried = [], 0
-    x0 = torch.tensor([prompt_ids], device=dev)
+    bar_id, pad = v["Bar"], v["<PAD>"]
+    seqs = [list(prompt_ids) for _ in range(n)]
+    done = [False] * n; slid = [False] * n; new_tok = 0; restarts = 0
     target = n_bars + 1
-    for _ in range(max_rounds):
-        b = min(batch, max(n - len(out), 1))
-        x = x0.repeat(b, 1)
-        g = model.generate(x, do_sample=True, temperature=temperature, top_k=top_k if top_k > 0 else None,
-                           top_p=top_p if top_p < 1 else None, max_new_tokens=ctx - x.shape[1],
-                           stopping_criteria=StoppingCriteriaList([BarStop(bar_id, target)]),
-                           pad_token_id=pad_id, attention_mask=torch.ones_like(x))
-        for row in g.tolist():
-            tried += 1
-            bars = [i for i, t in enumerate(row) if t == bar_id]
+    lp = LogitsProcessorList([NoSpecial([v["<PAD>"], v["<BOS>"], v["<EOS>"]])])
+    while not all(done) and new_tok < max_new:
+        idx = [i for i in range(n) if not done[i]]
+        ctxs, offs = [], []
+        for i in idx:
+            c, o = trim_context(seqs[i], ctx - chunk, v)
+            if c is None:  # restart this sample from the prompt (counted)
+                seqs[i] = list(prompt_ids); restarts += 1
+                c, o = seqs[i], 0
+            ctxs.append(c); offs.append(o); slid[i] = slid[i] or o > 0
+        L = max(len(c) for c in ctxs)
+        x = torch.tensor([[pad] * (L - len(c)) + c for c in ctxs], device=dev)
+        att = torch.tensor([[0] * (L - len(c)) + [1] * len(c) for c in ctxs], device=dev)
+        g = model.generate(x, attention_mask=att, do_sample=True, temperature=temperature,
+                           top_k=top_k if top_k > 0 else None, top_p=top_p if top_p < 1 else None,
+                           max_new_tokens=chunk, logits_processor=lp, pad_token_id=pad,
+                           stopping_criteria=StoppingCriteriaList([BarStop(bar_id, target, torch.tensor(offs, device=dev))]))
+        new_tok += chunk
+        for r, i in enumerate(idx):
+            seqs[i] += [t for t in g[r, L:].tolist() if t != pad]
+            bars = [j for j, t in enumerate(seqs[i]) if t == bar_id]
             if len(bars) >= target:
-                out.append(row[:bars[target - 1]])
-                if len(out) == n:
-                    return out, tried
-    raise RuntimeError(f"only {len(out)}/{n} pieces reached {n_bars} bars in {tried} tries")
+                seqs[i] = seqs[i][:bars[target - 1]]; done[i] = True
+    if not all(done):
+        raise RuntimeError(f"{done.count(False)}/{n} pieces did not reach {n_bars} bars in {max_new} new tokens")
+    return seqs, {"ok": n, "slid_window": int(sum(slid)), "restarts": restarts}
 
 
 if __name__ == "__main__":
@@ -108,6 +147,7 @@ if __name__ == "__main__":
 
     dev = "cuda"
     t2i = json.load(open(a.tok2idx)); i2t = {v: k for k, v in t2i.items()}
+    t2i["tempo_ids"] = {i for k, i in t2i.items() if isinstance(i, int) and k.startswith("Tempo_")}
     model, ck = load_model(a.ckpt, dev)
     ctx = ck["config"]["n_positions"]
     os.makedirs(a.out_dir, exist_ok=True)
@@ -123,9 +163,8 @@ if __name__ == "__main__":
             jobs.append((f"{s['song_name']}_{a.tag}", [t2i[t] for t in toks], a.n))
     records = []
     for name, pids, n in jobs:
-        n_bars_rel = a.n_bars if a.mode == "uncond" else a.n_bars - sum(1 for t in pids if t == t2i["Bar"])
-        seqs, tried = sample(model, pids, n, n_bars_rel, t2i["Bar"], t2i["<PAD>"], a.temperature, a.top_k, a.top_p, ctx)
-        print(f"{name}: {len(seqs)} pieces from {tried} samples (reject rate {1 - len(seqs)/tried:.2f})", flush=True)
+        seqs, stats = sample(model, pids, n, a.n_bars, t2i, a.temperature, a.top_k, a.top_p, ctx)
+        print(f"{name}: {len(seqs)} pieces, no rejection; {stats}", flush=True)
         for k, ids in enumerate(seqs):
             toks = [i2t[i] for i in ids]
             midi, bad = detokenize(toks, a.pos_per_beat)
