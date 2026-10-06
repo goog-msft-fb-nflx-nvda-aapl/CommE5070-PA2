@@ -68,6 +68,38 @@ class NoSpecial(LogitsProcessor):
         return scores
 
 
+class TypedSampler(LogitsProcessor):
+    """Does the whole sampling transform itself (use with generate(temperature=1, top_k=None, top_p=None)).
+    The type of the next token follows from the last token of the TA grammar
+    (Bar/BOS/Dur/Tempo -> struct: Pos or Bar ; Pos -> pitch (or Tempo) ; Pitch -> vel ; Vel -> dur),
+    and each type has its own temperature. bar_bias is added to the Bar logit at struct steps."""
+    def __init__(self, v, t_struct, t_pitch, t_vel, t_dur, bar_bias, top_k, top_p, dev):
+        self.bar_id, self.bar_bias, self.top_k, self.top_p = v["Bar"], bar_bias, top_k, top_p
+        V = max(i for i in v.values() if isinstance(i, int)) + 1
+        nxt = torch.zeros(V, dtype=torch.long)  # default 0 = struct (BOS, Bar, Dur, Tempo)
+        for k, i in v.items():
+            if not isinstance(i, int):
+                continue
+            if k.startswith("Pos_"): nxt[i] = 1
+            elif k.startswith("Pitch_"): nxt[i] = 2
+            elif k.startswith("Vel_"): nxt[i] = 3
+        self.nxt = nxt.to(dev)
+        self.temps = torch.tensor([t_struct, t_pitch, t_vel, t_dur], dtype=torch.float32, device=dev)
+    def __call__(self, input_ids, scores):
+        ty = self.nxt[input_ids[:, -1]]
+        scores = scores.float() / self.temps[ty][:, None]
+        scores[:, self.bar_id] += torch.where(ty == 0, self.bar_bias, 0.0)
+        if self.top_k > 0:
+            kth = torch.topk(scores, self.top_k, dim=-1).values[:, -1:]
+            scores = scores.masked_fill(scores < kth, -float("inf"))
+        if self.top_p < 1.0:
+            sl, si = torch.sort(scores, descending=True, dim=-1)
+            cp = torch.softmax(sl, dim=-1).cumsum(-1)
+            rm = cp - torch.softmax(sl, dim=-1) > self.top_p
+            scores = scores.masked_fill(rm.scatter(1, si, rm), -float("inf"))
+        return scores
+
+
 def load_model(ckpt, dev):
     ck = torch.load(ckpt, map_location="cpu")
     m = GPT2LMHeadModel._from_config(GPT2Config(**ck["config"]), attn_implementation="sdpa")
@@ -91,7 +123,7 @@ def trim_context(seq, max_len, v):
 
 
 @torch.no_grad()
-def sample(model, prompt_ids, n, n_bars, v, temperature, top_k, top_p, ctx, chunk=1024, max_new=48000):
+def sample(model, prompt_ids, n, n_bars, v, temperature, top_k, top_p, ctx, chunk=1024, max_new=48000, typed=None):
     """n pieces with exactly n_bars bars (prompt bars included). Context slides in `chunk`-token steps so no
     sample is rejected. Returns (token-id lists, stats)."""
     dev = next(model.parameters()).device
@@ -100,6 +132,10 @@ def sample(model, prompt_ids, n, n_bars, v, temperature, top_k, top_p, ctx, chun
     done = [False] * n; slid = [False] * n; new_tok = 0; restarts = 0
     target = n_bars + 1
     lp = LogitsProcessorList([NoSpecial([v["<PAD>"], v["<BOS>"], v["<EOS>"]])])
+    gen_kw = dict(temperature=temperature, top_k=top_k if top_k > 0 else None, top_p=top_p if top_p < 1 else None)
+    if typed is not None:  # own sampling transform; HF warpers off
+        lp.append(TypedSampler(v, *typed["temps"], typed["bar_bias"], top_k, top_p, dev))
+        gen_kw = dict(temperature=1.0, top_k=None, top_p=None)
     while not all(done) and new_tok < max_new:
         idx = [i for i in range(n) if not done[i]]
         ctxs, offs = [], []
@@ -112,8 +148,7 @@ def sample(model, prompt_ids, n, n_bars, v, temperature, top_k, top_p, ctx, chun
         L = max(len(c) for c in ctxs)
         x = torch.tensor([[pad] * (L - len(c)) + c for c in ctxs], device=dev)
         att = torch.tensor([[0] * (L - len(c)) + [1] * len(c) for c in ctxs], device=dev)
-        g = model.generate(x, attention_mask=att, do_sample=True, temperature=temperature,
-                           top_k=top_k if top_k > 0 else None, top_p=top_p if top_p < 1 else None,
+        g = model.generate(x, attention_mask=att, do_sample=True, **gen_kw,
                            max_new_tokens=chunk, logits_processor=lp, pad_token_id=pad,
                            stopping_criteria=StoppingCriteriaList([BarStop(bar_id, target, torch.tensor(offs, device=dev))]))
         new_tok += chunk
@@ -143,6 +178,11 @@ if __name__ == "__main__":
     ap.add_argument("--top_p", type=float, default=1.0)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tag", default="gen")
+    ap.add_argument("--t_struct", type=float, default=None, help="temperature for Pos/Bar choice (default: --temperature)")
+    ap.add_argument("--t_pitch", type=float, default=None)
+    ap.add_argument("--t_vel", type=float, default=None)
+    ap.add_argument("--t_dur", type=float, default=None)
+    ap.add_argument("--bar_bias", type=float, default=0.0, help="added to the Bar logit at Pos/Bar choice steps")
     a = ap.parse_args()
 
     dev = "cuda"
@@ -152,18 +192,23 @@ if __name__ == "__main__":
     ctx = ck["config"]["n_positions"]
     os.makedirs(a.out_dir, exist_ok=True)
     torch.manual_seed(a.seed); np.random.seed(a.seed)
+    tt = [a.t_struct, a.t_pitch, a.t_vel, a.t_dur]
+    typed = None if (all(x is None for x in tt) and a.bar_bias == 0.0) else \
+        {"temps": [a.temperature if x is None else x for x in tt], "bar_bias": a.bar_bias}
     jobs = []  # (name, prompt_ids, n)
     if a.mode == "uncond":
         jobs.append((a.tag, [t2i["<BOS>"]], a.n))
     else:
         for s in json.load(open(a.prompt_tokens)):
             toks = [t for t in s["tokens"] if t != "<EOS>"]
+            if toks[0] != "<BOS>":
+                toks = ["<BOS>"] + toks
             bars = [i for i, t in enumerate(toks) if t == "Bar"]
             toks = toks[:bars[a.prompt_bars]] if len(bars) > a.prompt_bars else toks
             jobs.append((f"{s['song_name']}_{a.tag}", [t2i[t] for t in toks], a.n))
     records = []
     for name, pids, n in jobs:
-        seqs, stats = sample(model, pids, n, a.n_bars, t2i, a.temperature, a.top_k, a.top_p, ctx)
+        seqs, stats = sample(model, pids, n, a.n_bars, t2i, a.temperature, a.top_k, a.top_p, ctx, typed=typed)
         print(f"{name}: {len(seqs)} pieces, no rejection; {stats}", flush=True)
         for k, ids in enumerate(seqs):
             toks = [i2t[i] for i in ids]
