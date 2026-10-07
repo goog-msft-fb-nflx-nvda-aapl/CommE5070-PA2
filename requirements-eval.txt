@@ -1,0 +1,6 @@
+# only needed to re-run the objective metrics (scripts/eval_basic.py, scripts/eval_bonus.py, src/si_eval.py)
+pandas==2.3.3
+tqdm==4.70.1
+scipy==1.15.3
+librosa==0.11.0
+matplotlib

@@ -1,0 +1,11 @@
+--- a/mueller_audio_tools/ssm_features.py	2026-10-07 20:37:15.854594383 +0900
++++ b/mueller_audio_tools/ssm_features.py	2026-10-07 20:37:15.854594383 +0900
+@@ -344,7 +344,7 @@
+     """    
+     # Waveform    
+     Fs = 22050
+-    x, Fs = librosa.load(fn_wav, Fs) 
++    x, Fs = librosa.load(fn_wav, sr=Fs) 
+     x_duration = (x.shape[0])/Fs
+ 
+     # Chroma Feature Sequence and SSM (10 Hz)

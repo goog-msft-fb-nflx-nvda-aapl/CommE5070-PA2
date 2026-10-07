@@ -1,0 +1,21 @@
+{
+ "B0_pure": {
+  "temperature": 1.0
+ },
+ "B_bias1": {
+  "temperature": 1.0,
+  "bar_bias": 1.0
+ },
+ "B_bias2": {
+  "temperature": 1.0,
+  "bar_bias": 2.0
+ },
+ "B_bias3": {
+  "temperature": 1.0,
+  "bar_bias": 3.0
+ },
+ "S_struct0.8": {
+  "temperature": 1.0,
+  "t_struct": 0.8
+ }
+}

@@ -28,7 +28,7 @@ def detokenize(tokens, p, out_name="PIANO"):
             else:
                 bad += 1; i += 1
         else:
-            if t not in ("<BOS>", "<EOS>", "<PAD>"):
+            if t not in ("<BOS>", "<EOS>", "<PAD>") and not t.startswith("Chord_"):
                 bad += 1
             i += 1
     tempos.sort()
@@ -115,10 +115,11 @@ def trim_context(seq, max_len, v):
     for k in range(1, len(bars)):
         tail = seq[bars[k]:]
         if len(tail) + 3 <= max_len:
-            has_t = len(tail) > 2 and tail[1] == v["Pos_0"] and tail[2] in v["tempo_ids"]
+            o = 2 if (len(tail) > 1 and tail[1] in v["chord_ids"]) else 1  # chord token (if any) stays right after Bar
+            has_t = len(tail) > o + 1 and tail[o] == v["Pos_0"] and tail[o + 1] in v["tempo_ids"]
             last_t = [t for t in seq[:bars[k]] if t in v["tempo_ids"]]
             ins = [v["Pos_0"], last_t[-1]] if (not has_t and last_t) else []
-            return [seq[0]] + tail[:1] + ins + tail[1:], k
+            return [seq[0]] + tail[:o] + ins + tail[o:], k
     return None, 0  # a single bar longer than the window: degenerate sample
 
 
@@ -188,6 +189,7 @@ if __name__ == "__main__":
     dev = "cuda"
     t2i = json.load(open(a.tok2idx)); i2t = {v: k for k, v in t2i.items()}
     t2i["tempo_ids"] = {i for k, i in t2i.items() if isinstance(i, int) and k.startswith("Tempo_")}
+    t2i["chord_ids"] = {i for k, i in t2i.items() if isinstance(i, int) and k.startswith("Chord_")}
     model, ck = load_model(a.ckpt, dev)
     ctx = ck["config"]["n_positions"]
     os.makedirs(a.out_dir, exist_ok=True)

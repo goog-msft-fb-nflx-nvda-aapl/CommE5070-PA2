@@ -1,0 +1,14 @@
+{
+ "B_bias4": {
+  "temperature": 1.0,
+  "bar_bias": 4.0
+ },
+ "B_bias5": {
+  "temperature": 1.0,
+  "bar_bias": 5.0
+ },
+ "B_bias6": {
+  "temperature": 1.0,
+  "bar_bias": 6.0
+ }
+}

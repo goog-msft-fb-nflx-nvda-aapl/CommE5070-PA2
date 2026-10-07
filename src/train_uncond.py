@@ -38,6 +38,7 @@ P_LO, P_HI = tok2idx["Pitch_21"], tok2idx["Pitch_108"]
 POS0 = tok2idx["Pos_0"]
 TEMPO_IDS = np.array([i for k, i in tok2idx.items() if k.startswith("Tempo_")])
 BAR = tok2idx["Bar"]
+CHORD_IDS = np.array([i for k, i in tok2idx.items() if k.startswith("Chord_")], dtype=np.int64)
 
 # ---- data ----
 songs = json.load(open(a.sequences))
@@ -74,10 +75,11 @@ def make_crop(song, j, max_len, end=None):
     start = song.bars[j]
     body = ids[start: (end if end is not None else len(ids))]
     ins = []
-    has_t = len(body) > 2 and body[1] == POS0 and body[2] in TEMPO_IDS
+    o = 2 if (len(body) > 1 and body[1] in CHORD_IDS) else 1  # a chord token (if present) stays right after Bar
+    has_t = len(body) > o + 1 and body[o] == POS0 and body[o + 1] in TEMPO_IDS
     if not has_t and song.tempo_before[j] >= 0:
         ins = [POS0, song.tempo_before[j]]
-    out = np.concatenate([[BOS], body[:1], ins, body[1:]]).astype(np.int64)
+    out = np.concatenate([[BOS], body[:o], ins, body[o:]]).astype(np.int64)
     return out[:max_len]
 
 def transpose(c, k_max):

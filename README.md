@@ -1,3 +1,57 @@
 # CommE5070 HW2: symbolic music generation on POP909
 
-Transformer trained from scratch on POP909 (training split only). Work in progress.
+Transformers trained from scratch on the POP909 training split only (no pretrained weights, no extra data).
+
+## Layout
+- `infer.py`: inference entry point (writes `.mid` + `.wav`, settable output directory)
+- `src/`: tokenizer wrapper, models/training, generation, bonus pipeline, evaluation helpers
+- `scripts/`: the TA-provided `tokenization.py`, `eval_basic.py`, `eval_bonus.py` (unmodified)
+- `vocab/`: token dictionaries (`tok2idx_p4.json` is the one used by the released models)
+- `results/`: training logs, run configs, and one json row per generation/evaluation run (config + checkpoint/code hashes + metrics)
+- `patches/`: one-line fix for the third-party MusDr code (see below)
+- `checkpoints/` (not in git, distributed with the cloud-drive package)
+
+## Install
+```bash
+conda create -n hw2 python=3.10 -y && conda activate hw2
+pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
+pip install -r requirements.txt
+# FluidSynth (needed for .wav rendering; no sudo):
+conda install -c conda-forge fluidsynth -y        # or: sudo apt-get install fluidsynth libfluidsynth3
+```
+
+## Inference
+```bash
+python infer.py uncond   --out_dir OUT                                       # Basic task a: 20 pieces x 32 bars
+python infer.py continue --prompt_dir POP909/prompts/basic-b --out_dir OUT   # Basic task b: 3 prompts x 3 configs
+python infer.py bonus    --prompt_dir POP909/prompts/bonus   --out_dir OUT   # Bonus: MELODY -> PIANO
+```
+`--seed` fixes the sampling. See the report for the chosen configurations.
+
+## Training (from scratch, POP909 only)
+```bash
+python src/tokenize_hw2.py --dataset_path POP909/training --tok2idx_output work/tok2idx_p4.json \
+       --sequences_output work/seqs_p4.json --pos_per_beat 4
+python src/train_uncond.py --tok2idx work/tok2idx_p4.json --sequences work/seqs_p4.json --out_dir work/runs/v2 \
+       --steps 20000 --dropout 0.3
+python src/bonus_data.py --dataset_path POP909/training --prompt_dir POP909/prompts/bonus \
+       --base_tok2idx work/tok2idx_p4.json --out_dir work/bonus_p4 --pos_per_beat 4
+python src/train_bonus.py --arch B --data work/bonus_p4/bonus_train.json --tok2idx work/bonus_p4/tok2idx_bonus.json \
+       --out_dir work/runs/bonusB --n_layer 6 --chord 2 --dropout 0.3 --steps 40000
+```
+
+## Evaluation
+```bash
+# MusDr (https://github.com/slSeanWU/MusDr) is cloned next to this repo; scripts/eval_basic.py imports MusDr.musdr
+PYTHONPATH=. python scripts/eval_basic.py --tok2idx_path vocab/tok2idx_p4.json --sequences_path OUT/g_tokens.json --output_csv m.csv
+python scripts/eval_bonus.py --prompt_dir POP909/prompts/bonus --gen_midi_dir OUT/bonus_melody_only --output_csv b.csv
+```
+SI (optional) uses the MusDr Python scape-plot code; with current librosa apply `patches/musdr_librosa_sr.patch`
+(`cd MusDr && patch -p1 < ../patches/musdr_librosa_sr.patch`), then `python src/si_eval.py --wav_dir WAVS --out_json si.json`.
+Extra packages for evaluation: `pip install -r requirements-eval.txt`.
+
+## Third-party code
+- TA scripts in `scripts/` (HW2 starter code), used unmodified; `src/tokenize_hw2.py` wraps `scripts/tokenization.py`.
+- MusDr (Wu & Yang, ISMIR 2020), used for H / GS (via `eval_basic.py`) and SI; one-line librosa fix in `patches/`.
+- Hugging Face `transformers` (`GPT2LMHeadModel`, `T5ForConditionalGeneration`, random initialization).
+- Pitch/onset REMI-style token design follows the TA tokenizer (Huang & Yang, Pop Music Transformer).

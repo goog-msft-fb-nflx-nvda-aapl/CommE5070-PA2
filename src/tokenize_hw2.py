@@ -11,12 +11,14 @@ Fixes two issues of the TA script (kept unmodified, imported from scripts/):
 import argparse, json, os, sys, pathlib
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
 import tokenization as tk
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--dataset_path", required=True)
 ap.add_argument("--tok2idx_output", required=True)
 ap.add_argument("--sequences_output", required=True)
 ap.add_argument("--pos_per_beat", type=int, default=16)
+ap.add_argument("--chord", type=int, default=0, help="1: insert the bar's chord token (Chord_0..23 / Chord_N, eval_bonus definition) after every Bar token")
 a = ap.parse_args()
 
 P = a.pos_per_beat
@@ -44,6 +46,25 @@ for s in seqs:
     s["tokens"], d = drop_oov_events(s["tokens"])
     tot_drop += d
     assert all(t in tok2idx for t in s["tokens"])
+if a.chord:
+    import pretty_midi
+    import bonus_data as bd
+    for k in [f"Chord_{i}" for i in range(24)] + ["Chord_N"]:
+        tok2idx[k] = len(tok2idx)
+    for s in seqs:
+        d = pathlib.Path(a.dataset_path) / s["song_name"]
+        midi = pretty_midi.PrettyMIDI(str(d / f"{s['song_name']}.mid"))
+        bt, binfo = bd.load_beats(str(d / "beat_midi.txt"))
+        first = min(tk.time_to_grid(n.start, bt, binfo, P)[0] for i in midi.instruments for n in i.notes)  # TA's first_note_bar
+        labels, _ = bd.bar_chords(str(d / "chord_midi.txt"), str(d / "beat_midi.txt"), binfo[-1][0] + 1)
+        out, k = [], 0
+        for t in s["tokens"]:
+            out.append(t)
+            if t == "Bar":
+                j = first + k; k += 1
+                c = labels[j] if j < len(labels) else -1
+                out.append("Chord_N" if c < 0 else f"Chord_{c}")
+        s["tokens"] = out
 print(f"pos_per_beat={P} vocab={len(tok2idx)} songs={len(seqs)} dropped_oov_events={tot_drop}")
 pathlib.Path(a.tok2idx_output).parent.mkdir(parents=True, exist_ok=True)
 json.dump(tok2idx, open(a.tok2idx_output, "w"), indent=4)

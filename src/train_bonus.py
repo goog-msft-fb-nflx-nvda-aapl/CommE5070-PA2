@@ -7,7 +7,7 @@ from transformers import GPT2Config, GPT2LMHeadModel, T5Config, T5ForConditional
 import bonus_lib as bl
 
 p = argparse.ArgumentParser()
-p.add_argument("--arch", choices=["A", "B"], required=True)
+p.add_argument("--arch", choices=["A", "B", "C"], required=True, help="C = stage-1 chord predictor (melody -> one chord token per bar)")
 p.add_argument("--data", required=True, help="bonus_train.json")
 p.add_argument("--tok2idx", required=True)
 p.add_argument("--out_dir", required=True)
@@ -58,7 +58,7 @@ def make_example(bars):
             if len(ids) <= a.ctx:
                 return ids, w
         else:
-            enc, dec = bl.build_B(bars[:n], v, a.chord)
+            enc, dec = bl.build_C(bars[:n], v) if a.arch == "C" else bl.build_B(bars[:n], v, a.chord)
             if len(enc) <= a.enc_ctx and len(dec) <= a.ctx:
                 return enc, dec
         n -= 1
@@ -144,6 +144,10 @@ def loss_of(batch, ls=0.0):
             logits = model(input_ids=enc, attention_mask=(enc != v.PAD).long(), decoder_input_ids=dec_in).logits.float()
             tgt = dec; wt = (dec != v.PAD).float()
     ce = F.cross_entropy(logits.reshape(-1, v.size), tgt.reshape(-1), reduction="none", label_smoothing=ls).view_as(wt)
+    if a.arch == "C" and not torch.is_grad_enabled():  # teacher-forced top-1 accuracy on annotated (non-N) chord positions
+        ann = torch.isin(tgt, torch.tensor(v.chord_ids, device=tgt.device))
+        loss_of.acc_hit = getattr(loss_of, "acc_hit", 0) + ((logits.argmax(-1) == tgt) & ann).sum().item()
+        loss_of.acc_n = getattr(loss_of, "acc_n", 0) + ann.sum().item()
     return (ce * wt).sum(), wt.sum()
 
 
@@ -183,6 +187,8 @@ for step in range(1, a.steps + 1):
     if step % a.eval_every == 0 or step == a.steps:
         val = evaluate()
         rec = {"step": step, "train_loss": (l / n).item(), "val_nll": val, "elapsed_s": time.time() - t0}
+        if a.arch == "C":
+            rec["val_chord_top1_teacher_forced"] = loss_of.acc_hit / max(loss_of.acc_n, 1); loss_of.acc_hit = loss_of.acc_n = 0
         log.write(json.dumps(rec) + "\n"); log.flush(); print("EVAL", rec, flush=True)
         if val < best:
             best = val; save("best.pt")

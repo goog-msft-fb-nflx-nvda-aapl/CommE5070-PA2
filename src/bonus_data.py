@@ -120,7 +120,8 @@ def add_bonus_vocab(tok2idx):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dataset_path", required=True)
+    ap.add_argument("--dataset_path", default=None, help="POP909 training dir (not needed with --prompts_only)")
+    ap.add_argument("--prompts_only", type=int, default=0)
     ap.add_argument("--prompt_dir", required=True)
     ap.add_argument("--base_tok2idx", required=True)
     ap.add_argument("--out_dir", required=True)
@@ -130,8 +131,12 @@ if __name__ == "__main__":
     os.makedirs(a.out_dir, exist_ok=True)
     tok2idx = add_bonus_vocab(json.load(open(a.base_tok2idx)))
     json.dump(tok2idx, open(os.path.join(a.out_dir, "tok2idx_bonus.json"), "w"), indent=4)
-    tr = build_training(a.dataset_path, a.pos_per_beat)
     pr = build_prompts(a.prompt_dir, a.pos_per_beat)
+    if a.prompts_only:
+        json.dump(pr, open(os.path.join(a.out_dir, "bonus_prompts.json"), "w"))
+        print(f"prompts {len(pr)} (bars {[s['n_bars'] for s in pr]})")
+        sys.exit(0)
+    tr = build_training(a.dataset_path, a.pos_per_beat)
     json.dump(tr, open(os.path.join(a.out_dir, "bonus_train.json"), "w"))
     json.dump(pr, open(os.path.join(a.out_dir, "bonus_prompts.json"), "w"))
     allt = [t for s in tr for b in s["bars"] for t in b["m"] + b["p"]]
