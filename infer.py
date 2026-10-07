@@ -15,8 +15,9 @@ CK = lambda *p: os.path.join(HERE, "checkpoints", *p)
 VOC = lambda *p: os.path.join(HERE, "vocab", *p)
 SRC = lambda *p: os.path.join(HERE, "src", *p)
 
-UNCOND_CKPT = CK("uncond_v2_best.pt")
-UNCOND_VOCAB = VOC("tok2idx_p4.json")
+UNCOND_CKPT = CK("uncond_w2_best.pt")      # GPT-2 8L x 512, pos_per_beat 16, dropout 0.3 (work run w2)
+UNCOND_VOCAB = VOC("tok2idx_p16.json")
+POS_PER_BEAT = "16"
 # Task a / b sampling configs (see README / report): name -> generate.py flags
 CONFIGS = {
     "cfg1_T1.0_pure": ["--temperature", "1.0"],
@@ -36,7 +37,7 @@ def render(midi_dir, wav_dir=None):
 
 def uncond(a):
     out = os.path.join(a.out_dir, "taskA_" + a.config)
-    run([PY, SRC("generate.py"), "uncond", "--ckpt", UNCOND_CKPT, "--tok2idx", UNCOND_VOCAB, "--pos_per_beat", "4",
+    run([PY, SRC("generate.py"), "uncond", "--ckpt", UNCOND_CKPT, "--tok2idx", UNCOND_VOCAB, "--pos_per_beat", POS_PER_BEAT,
          "--out_dir", out, "--n", str(a.n), "--n_bars", "32", "--seed", str(a.seed), "--tag", "g"] + CONFIGS[a.config])
     render(out)
     print("done:", out)
@@ -46,10 +47,10 @@ def cont(a):
     tmp = os.path.join(a.out_dir, "_prompt_tokens")
     os.makedirs(tmp, exist_ok=True)
     run([PY, SRC("tokenize_hw2.py"), "--dataset_path", a.prompt_dir, "--tok2idx_output", os.path.join(tmp, "tok2idx.json"),
-         "--sequences_output", os.path.join(tmp, "prompts.json"), "--pos_per_beat", "4"])
+         "--sequences_output", os.path.join(tmp, "prompts.json"), "--pos_per_beat", POS_PER_BEAT])
     for name, flags in CONFIGS.items():
         out = os.path.join(a.out_dir, "taskB_" + name)
-        run([PY, SRC("generate.py"), "cont", "--ckpt", UNCOND_CKPT, "--tok2idx", UNCOND_VOCAB, "--pos_per_beat", "4",
+        run([PY, SRC("generate.py"), "cont", "--ckpt", UNCOND_CKPT, "--tok2idx", UNCOND_VOCAB, "--pos_per_beat", POS_PER_BEAT,
              "--prompt_tokens", os.path.join(tmp, "prompts.json"), "--prompt_bars", "8", "--n_bars", "32", "--n", "1",
              "--out_dir", out, "--seed", str(a.seed), "--tag", name.split("_")[0]] + flags)
         render(out)
@@ -60,8 +61,8 @@ def bonus(a):
     cfg = json.load(open(VOC("bonus_final.json")))[a.mode]
     tmp = os.path.join(a.out_dir, "_bonus_prompts")
     os.makedirs(tmp, exist_ok=True)
-    run([PY, SRC("bonus_data.py"), "--prompts_only", "1", "--prompt_dir", a.prompt_dir, "--base_tok2idx", UNCOND_VOCAB,
-         "--out_dir", tmp, "--pos_per_beat", "4"])
+    run([PY, SRC("bonus_data.py"), "--prompts_only", "1", "--prompt_dir", a.prompt_dir, "--base_tok2idx", VOC("tok2idx_p4.json"),
+         "--out_dir", tmp, "--pos_per_beat", "4"])  # the bonus models use the p=4 grid
     out = os.path.join(a.out_dir, "bonus_" + a.mode)
     cmd = [PY, SRC("gen_bonus.py"), "--ckpt", CK(cfg["ckpt"]), "--tok2idx", os.path.join(tmp, "tok2idx_bonus.json"),
            "--prompts", os.path.join(tmp, "bonus_prompts.json"), "--prompt_dir", a.prompt_dir, "--out_dir", out,
