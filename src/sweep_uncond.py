@@ -49,7 +49,7 @@ for ck in a.ckpts:
         T, k, pp = sp.get("temperature", 1.0), sp.get("top_k", 0), sp.get("top_p", 1.0)
         if (ck, name) in done:
             continue
-        out = os.path.join(a.out_root, run, f"{ck}__{name}")
+        out = os.path.join(a.out_root, run, f"{ck}__{name}" + (f"__s{a.seed}" if a.seed != 0 else ""))  # seed 0 keeps the original folder names
         cmd = [sys.executable, os.path.join(here, "generate.py"), "uncond", "--ckpt", os.path.join(a.run_dir, ck + ".pt"),
                "--tok2idx", a.tok2idx, "--pos_per_beat", str(a.pos_per_beat), "--out_dir", out, "--n", str(a.n),
                "--temperature", str(T), "--top_k", str(k), "--top_p", str(pp), "--seed", str(a.seed), "--tag", "g"] + sum([[f"--{e}", str(sp[e])] for e in EXTRA if e in sp], [])
