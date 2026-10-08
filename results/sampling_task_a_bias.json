@@ -1,0 +1,14 @@
+{
+ "bias1": {
+  "temperature": 1.0,
+  "bar_bias": 1.0
+ },
+ "bias2": {
+  "temperature": 1.0,
+  "bar_bias": 2.0
+ },
+ "bias2.5": {
+  "temperature": 1.0,
+  "bar_bias": 2.5
+ }
+}
