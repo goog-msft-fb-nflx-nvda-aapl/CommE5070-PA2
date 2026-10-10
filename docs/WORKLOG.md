@@ -388,3 +388,11 @@ Queues (`src/final_runs.sh <gpu> <jobs...>`, tmux q0-q3; all `--val_frac 0 --dro
 - Bonus arch A (10000 steps, batch 16; dev check `DEV_A2_10k` with a 5% held-out split verifies that the 10k-step schedule ends near its validation minimum; the dev A runs had their minimum at step 8500 of a 20k schedule): FA2 (L1, chord in melody segment), FA1 (no chord), FA8 (chord in piano segment), FA5 (L0), FA6 (L2), FA10 (L2, chord in piano segment), FA7 (predicted chord) (q2 chain, after F3).
 - Bonus arch B (T5 6+6): F2 = chord in decoder p4 40k (running), FB1 no chord / FB2 encoder chord / FB5 predicted chord (20k each, q1 chain after F2), FB8 = chord in decoder p=16 40k + FC4 = p=16 stage-1 (q0 chain after F1); F3 = stage-1 chord predictor p4 8000 steps (done).
 Entropy matching: `src/entropy_match.py` (reference = the model's per-token entropy / NLL on real held-out 32-bar crops, teacher forced; per config: 20 sampled pieces, same statistics, JS divergence of the entropy histograms, |d NLL|, plus H1/H4/GS from the unmodified eval_basic). Test on w2 (n=4): real held-out mean entropy 1.124 (mean NLL 1.299, perplexity 3.665); T=1.0 pure: mean entropy 1.047, JS 0.0046; T=1.0 top-p 0.9: 0.395, JS 0.104 (too conservative, as in the lecture's example). Full grid on w2 (T 0.8-1.2 x top-p 0.9/0.95/0.98/1.0 x Bar bias 0/3, n=20): window em1 -> `work/entropy_match_w2.json`.
+
+## 2026-10-10 — Experiment: greedy / beam-search decoding (lecture 05 s74), dev model w2 (p16, best ckpt, step 19500)
+`generate.py uncond --greedy 1 [--num_beams 3] --n 1 --seed 0` (deterministic: one piece; beam search is applied chunk by chunk inside the sliding window, an approximation), scored with the unmodified `eval_basic.py`. Real reference p16: H1 2.118 / H4 2.617 / GS 0.962.
+| decoding | H1 | H4 | GS | notes/bar | distinct bars (of 32) |
+|---|---|---|---|---|---|
+| greedy (argmax) | 1.657 | 2.303 | 0.9995 | 40.8 | 3 |
+| beam search, 3 beams | 1.689 | 1.928 | 1.0000 | 42.0 | 3 |
+Reading: deterministic decoding collapses into a loop of ~3 distinct bars (GS ~ 1.0) and is ~2x denser than real data; n = 1 piece each, so only indicative. Configs in `results/decode/`.

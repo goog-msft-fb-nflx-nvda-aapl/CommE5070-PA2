@@ -124,7 +124,7 @@ def trim_context(seq, max_len, v):
 
 
 @torch.no_grad()
-def sample(model, prompt_ids, n, n_bars, v, temperature, top_k, top_p, ctx, chunk=1024, max_new=48000, typed=None):
+def sample(model, prompt_ids, n, n_bars, v, temperature, top_k, top_p, ctx, chunk=1024, max_new=48000, typed=None, greedy=False, num_beams=1):
     """n pieces with exactly n_bars bars (prompt bars included). Context slides in `chunk`-token steps so no
     sample is rejected. Returns (token-id lists, stats)."""
     dev = next(model.parameters()).device
@@ -133,10 +133,12 @@ def sample(model, prompt_ids, n, n_bars, v, temperature, top_k, top_p, ctx, chun
     done = [False] * n; slid = [False] * n; new_tok = 0; restarts = 0
     target = n_bars + 1
     lp = LogitsProcessorList([NoSpecial([v["<PAD>"], v["<BOS>"], v["<EOS>"]])])
-    gen_kw = dict(temperature=temperature, top_k=top_k if top_k > 0 else None, top_p=top_p if top_p < 1 else None)
+    gen_kw = dict(do_sample=True, temperature=temperature, top_k=top_k if top_k > 0 else None, top_p=top_p if top_p < 1 else None)
     if typed is not None:  # own sampling transform; HF warpers off
         lp.append(TypedSampler(v, *typed["temps"], typed["bar_bias"], top_k, top_p, dev))
-        gen_kw = dict(temperature=1.0, top_k=None, top_p=None)
+        gen_kw = dict(do_sample=True, temperature=1.0, top_k=None, top_p=None)
+    if greedy:  # deterministic decoding: argmax (num_beams=1) or beam search (applied chunk by chunk)
+        gen_kw = dict(do_sample=False, num_beams=num_beams)
     while not all(done) and new_tok < max_new:
         idx = [i for i in range(n) if not done[i]]
         ctxs, offs = [], []
@@ -149,7 +151,7 @@ def sample(model, prompt_ids, n, n_bars, v, temperature, top_k, top_p, ctx, chun
         L = max(len(c) for c in ctxs)
         x = torch.tensor([[pad] * (L - len(c)) + c for c in ctxs], device=dev)
         att = torch.tensor([[0] * (L - len(c)) + [1] * len(c) for c in ctxs], device=dev)
-        g = model.generate(x, attention_mask=att, do_sample=True, **gen_kw,
+        g = model.generate(x, attention_mask=att, **gen_kw,
                            max_new_tokens=chunk, logits_processor=lp, pad_token_id=pad,
                            stopping_criteria=StoppingCriteriaList([BarStop(bar_id, target, torch.tensor(offs, device=dev))]))
         new_tok += chunk
@@ -183,6 +185,8 @@ if __name__ == "__main__":
     ap.add_argument("--t_pitch", type=float, default=None)
     ap.add_argument("--t_vel", type=float, default=None)
     ap.add_argument("--t_dur", type=float, default=None)
+    ap.add_argument("--greedy", type=int, default=0, help="1: deterministic decoding (argmax, or beam search with --num_beams > 1)")
+    ap.add_argument("--num_beams", type=int, default=1)
     ap.add_argument("--bar_bias", type=float, default=0.0, help="added to the Bar logit at Pos/Bar choice steps")
     a = ap.parse_args()
 
@@ -210,7 +214,7 @@ if __name__ == "__main__":
             jobs.append((f"{s['song_name']}_{a.tag}", [t2i[t] for t in toks], a.n))
     records = []
     for name, pids, n in jobs:
-        seqs, stats = sample(model, pids, n, a.n_bars, t2i, a.temperature, a.top_k, a.top_p, ctx, typed=typed)
+        seqs, stats = sample(model, pids, n, a.n_bars, t2i, a.temperature, a.top_k, a.top_p, ctx, typed=typed, greedy=bool(a.greedy), num_beams=a.num_beams)
         print(f"{name}: {len(seqs)} pieces, no rejection; {stats}", flush=True)
         for k, ids in enumerate(seqs):
             toks = [i2t[i] for i in ids]
