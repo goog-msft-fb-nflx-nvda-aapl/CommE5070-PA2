@@ -439,3 +439,24 @@ Controls: ceiling CA 0.7625 (real piano); wrong-song piano CA 0.0125, OA 0.846 /
 | FA10: A L2, chord forced in piano segment | given | 0.546-0.579 | 0.878-0.890 | 0.562-0.571 | 0.634-0.687 | 0.483-0.498 |
 Same picture as the dev runs: (1) CA depends on the chord input (given 0.48-0.67 vs none 0.12-0.23); (2) lookahead 2 with the chord in the melody segment collapses (0.21-0.32) and recovers when the chord sits in the piano segment (0.55-0.58); (3) the two-stage melody-only pipeline is the best no-chord setting (0.18-0.23 vs 0.12-0.18); (4) OA_V 0.51-0.62, OA_D 0.58-0.70, OA_IOI 0.44-0.59 across all models.
 Task a, F1 sweep: see the previous entry. Representation ablation: dev runs finished with val NLL per REMI-equivalent token R1 MIDI-like p4 = 1.2111 (best), R2 CP p4 = 1.2752 (best), vs REMI GPT-2 v2 (p4, dropout 0.3) 0.9523 (same 45 held-out songs; REMI measured per token of the REMI sequence, the others per REMI-equivalent token). Full-data versions R1f / R2f launched (GPUs 2/3, 20000 steps, `--val_frac 0`), p=16 bonus scoring pb3 (FB8 given chords + two-stage with FC4) on GPU 0.
+
+## 2026-10-10 20:40 JST — FINAL (full-data) Task a ablation, p=4 models (3 seeds x 20 pieces per cell; unmodified eval_basic; real p=4: H1 2.118 / H4 2.617 / GS 0.887, 20.6 notes/bar; rows `results/final/results_F{4,5,6}_*`)
+| model | sampling | H1 | H4 | GS | notes/bar | malformed |
+|---|---|---|---|---|---|---|
+| F4 (p4, CE) | pure | 2.122 +- 0.030 | 2.568 +- 0.039 | 0.919 +- 0.004 | 27.6 | 115 |
+| F4 | pure + Bar bias 3 | 1.999 +- 0.081 | 2.545 +- 0.056 | 0.891 +- 0.009 | 22.1 | 844 |
+| F4 | T1.0 top-p 0.95 | 2.123 +- 0.067 | 2.493 +- 0.055 | 0.968 +- 0.004 | 27.7 | 0 |
+| F4 | T0.9 top-p 0.9 | 2.051 +- 0.030 | 2.421 +- 0.046 | 0.988 +- 0.007 | 29.1 | 0 |
+| F4 | T1.2 top-k 5 | 2.221 +- 0.019 | 2.607 +- 0.009 | 0.895 +- 0.004 | 31.4 | 10 |
+| F5 (p4 + chord tokens) | pure | 2.148 +- 0.024 | 2.532 +- 0.062 | 0.924 +- 0.005 | 28.6 | 94 |
+| F5 | pure + Bar bias 3 | 2.025 +- 0.005 | 2.491 +- 0.019 | 0.903 +- 0.008 | 22.4 | 79 |
+| F5 | T1.0 top-p 0.95 | 2.155 +- 0.021 | 2.511 +- 0.035 | 0.968 +- 0.007 | 31.0 | 139 |
+| F5 | T0.9 top-p 0.9 | 2.037 +- 0.043 | 2.358 +- 0.047 | 0.989 +- 0.005 | 28.1 | 0 |
+| F5 | T1.2 top-k 5 | 2.191 +- 0.025 | 2.586 +- 0.034 | 0.905 +- 0.003 | 30.0 | 12 |
+| F6 (p4, label smoothing 0.1) | pure | 2.012 +- 0.025 | 2.785 +- 0.018 | 0.721 +- 0.014 | 16.0 | 28634 |
+| F6 | pure + Bar bias 3 | 1.397 +- 0.036 | 2.232 +- 0.041 | 0.873 +- 0.007 | 5.7 | 8042 |
+| F6 | T1.0 top-p 0.95 | 2.030 +- 0.035 | 2.571 +- 0.035 | 0.840 +- 0.009 | 25.1 | 5336 |
+| F6 | T0.9 top-p 0.9 | 2.102 +- 0.039 | 2.458 +- 0.005 | 0.991 +- 0.002 | 28.5 | 0 |
+| F6 | T1.2 top-k 5 | 2.214 +- 0.019 | 2.604 +- 0.010 | 0.897 +- 0.004 | 30.7 | 377 |
+Same pattern as the dev models: Bar bias 3 gives real-like density (22.1-22.4) and, at p=4, real-like GS (0.891 / 0.903 vs 0.887) without a clear change in H4; chord tokens do not change H4/GS clearly (F5 vs F4 within the seed sd); label smoothing breaks free sampling (up to 28,634 malformed tokens in 60 pieces). F1 (p16) vs F4 (p4) at bias 3: H1 2.105 vs 1.999, H4 2.594 vs 2.545, GS 0.966 vs 0.891 (each vs its own real GS 0.962 / 0.887).
+Status: R1f / R2f (full-data MIDI-like / CP) trained; their Task a sweeps run in window post2 (GPU 1; MIDI-like: 4 configs, no Bar bias; CP: 5 configs incl. Bar bias); FB1 (B no chord) done, FB2 (encoder chord) training, FB5 (predicted chord) queued; bonus sweeps for FB1/FB2/FB5 queued in pb4 (GPU 2).

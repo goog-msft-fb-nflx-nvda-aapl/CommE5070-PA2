@@ -1,0 +1,17 @@
+{
+ "T1.0_pure": {
+  "temperature": 1.0
+ },
+ "T1.0_p0.95": {
+  "temperature": 1.0,
+  "top_p": 0.95
+ },
+ "T0.9_p0.9": {
+  "temperature": 0.9,
+  "top_p": 0.9
+ },
+ "T1.2_k5": {
+  "temperature": 1.2,
+  "top_k": 5
+ }
+}
