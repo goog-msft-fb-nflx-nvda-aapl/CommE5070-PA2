@@ -521,3 +521,20 @@ Queue (each logged with config): FB9 = B chord-in-decoder, rel buckets 128 / max
 - F7 = Task a with a llama-style decoder (RoPE, RMSNorm, SwiGLU, tied embeddings, attention dropout 0.3 only, intermediate 1408; same 8L x 512 x 8h, ctx 4096, p16, 20000 steps, full data, last.pt), then 3-seed x 5-config sweep (`src/run_rope.sh`). Confound: the architecture family changes, not only the position encoding. Queued on GPU 1 behind best-of-8 (tmux `rope`). GPU 0 and 3 are not used (known-broken per project notes).
 - Running: FB9 then FB10 (GPU 2, tmux `rb`), best-of-8 (GPU 1, tmux `bon`).
 - Still to queue after these: SI on the final F1 sets, pitch-only repetition penalty (Task a / bonus), chord-conditioned logit bias (chord-given only).
+
+## 2026-10-11 best-of-8 and F7 (RoPE) scored
+Best-of-8 (gen_bonus --best_of 8, T0.9 top_p0.9, seeds 0-2 x 10 prompts, bonus_final F2 last.pt, p4; rows results/final/results_F2_bestof8.jsonl, results_F2F3_bestof8.jsonl). Candidates are ranked by the fraction of bars whose estimated chord (eval_bonus.estimate_chord) equals the conditioning chord of that bar.
+| variant | CA (3 seeds) | DP / DV / DD / DIOI (mean) | 
+|---|---|---|
+| chord given, best-of-8 | 0.925 / 0.9125 / 0.9125 (mean 0.917; CA-ceiling 0.7625) | 0.886 / 0.578 / 0.699 / 0.558 |
+| two-stage (stage-1 chords), best-of-8 | 0.256 / 0.256 / 0.256 | 0.835 / 0.604 / 0.641 / 0.500 |
+Single-sample references: F2 given T0.9 p0.9 CA 0.656; F2+F3 two-stage 0.183-0.231. Best-of-8 in given mode selects with the same labels the metric scores, so the number measures selection against the evaluation labels (CA above the real piano's own ceiling 0.7625 confirms that); it is reported as a separate variant. In two-stage mode the selected candidate agrees with the stage-1 chords in 100% of bars, so CA is bounded by stage-1 accuracy (0.256 here).
+F7 = Task a llama-style decoder (RoPE), p16, 20000 steps, dropout 0.3, full data, last.pt, 3 seeds x 20 pieces per sampling config (rows results/final/results_F7_rope_p16_full_s{0,1,2}.jsonl); real data H1 2.118 / H4 2.617 / GS 0.887:
+| sampling | H1 | H4 | GS | notes/bar (quarters mean) |
+|---|---|---|---|---|
+| T1.0 pure | 2.142 | 2.640 | 0.967 | 21.6 |
+| T1.0 top_p0.95 | 2.107 | 2.580 | 0.974 | 21.5 |
+| T0.9 top_p0.9 | 2.073 | 2.563 | 0.977 | 23.6 |
+| T1.2 top_k5 | 2.154 | 2.613 | 0.965 | 23.7 |
+| T1.0 + bar_bias3 | 2.082 | 2.600 | 0.967 | 19.4 |
+F1 (GPT-2 learned absolute positions) pure: 2.169 / 2.600 / 0.963. Differences are small (H1 0.03, H4 0.04, GS 0.004) and not resolved with one training seed; architecture family also differs (RMSNorm, SwiGLU, attention dropout only).

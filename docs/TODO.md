@@ -51,8 +51,8 @@ Prepared (CPU-side, 2026-10-07): `src/bonus_data.py` (run OK), `src/bonus_lib.py
 - [x] FB5 predicted-chord B scored (CA 0.127-0.163)
 - [x] In-attention chord embedding, bonus A (FA11 control vs FA12: +0.06 to +0.14 CA)
 - [ ] FB9 (T5 buckets 128 / dist 1024), FB10 (d256 4+4) trained + swept
-- [ ] Best-of-8 by chord agreement (given and two-stage)
-- [ ] F7 RoPE/llama-style Task a model + sweep
+- [x] Best-of-8 by chord agreement (given 0.91-0.93, two-stage 0.256)
+- [x] F7 RoPE/llama-style Task a model + sweep
 - [ ] SI on final F1 sets
 - [ ] Pitch-only repetition penalty; chord-conditioned logit bias (chord-given only)
 - [ ] Task a final 20 .mid/.wav (pure default), Task b regenerate from F1, bonus 10 .mid/.wav
