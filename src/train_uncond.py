@@ -5,12 +5,13 @@ import argparse, json, math, os, random, time, bisect
 import numpy as np
 import torch
 import torch.nn.functional as F
-from transformers import GPT2Config, GPT2LMHeadModel
+from transformers import GPT2Config, GPT2LMHeadModel, LlamaConfig, LlamaForCausalLM
 
 p = argparse.ArgumentParser()
 p.add_argument("--tok2idx", required=True)
 p.add_argument("--sequences", required=True)
 p.add_argument("--out_dir", required=True)
+p.add_argument("--arch", choices=["gpt2", "llama"], default="gpt2", help="llama = RoPE + RMSNorm + SwiGLU decoder (same depth/width), attention dropout only")
 p.add_argument("--ctx", type=int, default=4096)
 p.add_argument("--n_layer", type=int, default=8)
 p.add_argument("--n_embd", type=int, default=512)
@@ -131,7 +132,13 @@ dev = "cuda"
 cfg = GPT2Config(vocab_size=V, n_positions=a.ctx, n_embd=a.n_embd, n_layer=a.n_layer, n_head=a.n_head,
                  resid_pdrop=a.dropout, embd_pdrop=a.dropout, attn_pdrop=a.dropout,
                  bos_token_id=BOS, eos_token_id=EOS, pad_token_id=PAD)
-model = GPT2LMHeadModel._from_config(cfg, attn_implementation="sdpa").to(dev)
+if a.arch == "llama":
+    cfg = LlamaConfig(vocab_size=V, hidden_size=a.n_embd, intermediate_size=1408, num_hidden_layers=a.n_layer, num_attention_heads=a.n_head,
+                      max_position_embeddings=a.ctx, attention_dropout=a.dropout, tie_word_embeddings=True,
+                      bos_token_id=BOS, eos_token_id=EOS, pad_token_id=PAD)
+    model = LlamaForCausalLM._from_config(cfg, attn_implementation="sdpa").to(dev)
+else:
+    model = GPT2LMHeadModel._from_config(cfg, attn_implementation="sdpa").to(dev)
 n_par = sum(q.numel() for q in model.parameters())
 print(f"params {n_par/1e6:.1f}M, attn={model.config._attn_implementation}", flush=True)
 decay = [q for n, q in model.named_parameters() if q.ndim >= 2]

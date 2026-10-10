@@ -6,7 +6,7 @@ import argparse, json, os, bisect
 import numpy as np
 import torch
 import pretty_midi
-from transformers import GPT2Config, GPT2LMHeadModel, StoppingCriteria, StoppingCriteriaList, LogitsProcessor, LogitsProcessorList
+from transformers import LlamaConfig, LlamaForCausalLM, GPT2Config, GPT2LMHeadModel, StoppingCriteria, StoppingCriteriaList, LogitsProcessor, LogitsProcessorList
 
 
 def detokenize(tokens, p, out_name="PIANO"):
@@ -102,7 +102,10 @@ class TypedSampler(LogitsProcessor):
 
 def load_model(ckpt, dev):
     ck = torch.load(ckpt, map_location="cpu")
-    m = GPT2LMHeadModel._from_config(GPT2Config(**ck["config"]), attn_implementation="sdpa")
+    if ck["config"].get("model_type") == "llama":
+        m = LlamaForCausalLM._from_config(LlamaConfig(**ck["config"]), attn_implementation="sdpa")
+    else:
+        m = GPT2LMHeadModel._from_config(GPT2Config(**ck["config"]), attn_implementation="sdpa")
     m.load_state_dict(ck["model"]); return m.to(dev).eval(), ck
 
 
@@ -195,7 +198,7 @@ if __name__ == "__main__":
     t2i["tempo_ids"] = {i for k, i in t2i.items() if isinstance(i, int) and k.startswith("Tempo_")}
     t2i["chord_ids"] = {i for k, i in t2i.items() if isinstance(i, int) and k.startswith("Chord_")}
     model, ck = load_model(a.ckpt, dev)
-    ctx = ck["config"]["n_positions"]
+    ctx = ck["config"].get("n_positions") or ck["config"]["max_position_embeddings"]
     os.makedirs(a.out_dir, exist_ok=True)
     torch.manual_seed(a.seed); np.random.seed(a.seed)
     tt = [a.t_struct, a.t_pitch, a.t_vel, a.t_dur]

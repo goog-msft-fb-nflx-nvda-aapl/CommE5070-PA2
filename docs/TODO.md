@@ -6,7 +6,7 @@ Deadline: 2026-10-26 23:59. Work one item at a time, log results/decisions in `W
 - [~] FINAL models retrained on ALL 896 training songs (HW: use the whole training set): F1 (Task a/b, p16 dropout 0.3, 20k), F2 (bonus B chord-in-decoder p4, 40k), F3 (stage-1 chord predictor) running 2026-10-10; then regenerate Task a/b/bonus deliverables from these checkpoints (last.pt)
 - [ ] Entropy-histogram / perplexity-matching selection of sampling params (Compose & Embellish; lecture 05 s78-79) for Task a/b/bonus; report how the configs were chosen
 - [ ] Greedy decoding row in the Task a table
-- [ ] Representation ablations from the lectures: MIDI-like, CP-word (HW example table has a CP-word row); optional in-attention chord embedding for the bonus
+- [x] Representation ablations from the lectures: MIDI-like, CP-word (HW example table has a CP-word row); optional in-attention chord embedding for the bonus (FA12, see WORKLOG 2026-10-11)
 - [ ] Test infer.py end to end in a clean env; package checkpoints + README
 - [ ] Choose final Task a config (bias 3 vs pure vs bias grid; SI trade-off), user marks best Task b config per prompt by listening
 
@@ -46,3 +46,13 @@ Prepared (CPU-side, 2026-10-07): `src/bonus_data.py` (run OK), `src/bonus_lib.py
 - [ ] Prep cloud-drive package: code, `README.md` (TA-runnable inference, settable output path, produces listening samples), `requirements.txt`, checkpoints, all generation results — exclude training/preprocessed data, others' models, cache files
 - [ ] Add cloud-drive link to report's first page + NTU COOL comment
 - [ ] Make GitHub repo public (after deadline, per standing policy)
+
+## Round 2 queue (2026-10-11)
+- [x] FB5 predicted-chord B scored (CA 0.127-0.163)
+- [x] In-attention chord embedding, bonus A (FA11 control vs FA12: +0.06 to +0.14 CA)
+- [ ] FB9 (T5 buckets 128 / dist 1024), FB10 (d256 4+4) trained + swept
+- [ ] Best-of-8 by chord agreement (given and two-stage)
+- [ ] F7 RoPE/llama-style Task a model + sweep
+- [ ] SI on final F1 sets
+- [ ] Pitch-only repetition penalty; chord-conditioned logit bias (chord-given only)
+- [ ] Task a final 20 .mid/.wav (pure default), Task b regenerate from F1, bonus 10 .mid/.wav
