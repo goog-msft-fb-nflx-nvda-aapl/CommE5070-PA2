@@ -13,6 +13,7 @@ ap.add_argument("--out_root", required=True)
 ap.add_argument("--results", required=True)
 ap.add_argument("--n", type=int, default=20)
 ap.add_argument("--seed", type=int, default=0)
+ap.add_argument("--gen_script", default="generate.py", help="generate.py (REMI GPT-2) or gen_alt.py (MIDI-like / CP)")
 ap.add_argument("--sampling_file", default=None, help="json {name: {temperature, top_k, top_p, t_struct, t_pitch, t_vel, t_dur, bar_bias}}")
 a = ap.parse_args()
 
@@ -38,7 +39,7 @@ def quarters(toks):
     return [round(sum(sum(q[i * 8:(i + 1) * 8]) for q in per) / 8 / len(per), 2) for i in range(4)] if per else None
 
 sha = lambda f: hashlib.sha256(open(f, "rb").read()).hexdigest()[:16]
-code = {f: sha(os.path.join(here, f)) for f in ["generate.py", "sweep_uncond.py"]}
+code = {f: sha(os.path.join(here, f)) for f in [a.gen_script, "sweep_uncond.py"]}
 done = set()
 if os.path.exists(a.results):
     for l in open(a.results):
@@ -50,7 +51,7 @@ for ck in a.ckpts:
         if (ck, name) in done:
             continue
         out = os.path.join(a.out_root, run, f"{ck}__{name}" + (f"__s{a.seed}" if a.seed != 0 else ""))  # seed 0 keeps the original folder names
-        cmd = [sys.executable, os.path.join(here, "generate.py"), "uncond", "--ckpt", os.path.join(a.run_dir, ck + ".pt"),
+        cmd = [sys.executable, os.path.join(here, a.gen_script), "uncond", "--ckpt", os.path.join(a.run_dir, ck + ".pt"),
                "--tok2idx", a.tok2idx, "--pos_per_beat", str(a.pos_per_beat), "--out_dir", out, "--n", str(a.n),
                "--temperature", str(T), "--top_k", str(k), "--top_p", str(pp), "--seed", str(a.seed), "--tag", "g"] + sum([[f"--{e}", str(sp[e])] for e in EXTRA if e in sp], [])
         g = subprocess.run(cmd, capture_output=True, text=True)
