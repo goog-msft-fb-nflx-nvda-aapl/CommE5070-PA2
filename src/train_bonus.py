@@ -13,6 +13,7 @@ p.add_argument("--tok2idx", required=True)
 p.add_argument("--out_dir", required=True)
 p.add_argument("--lookahead", type=int, default=1)
 p.add_argument("--chord", type=int, default=0, help="1: per-bar chord token in the melody conditioning")
+p.add_argument("--chord_emb", type=int, default=0, help="A: 1 = in-attention chord embedding (use with --chord 3)")
 p.add_argument("--melody_w", type=float, default=0.0, help="A: loss weight on melody/condition tokens")
 p.add_argument("--ctx", type=int, default=2048, help="A: context; B: decoder max length")
 p.add_argument("--enc_ctx", type=int, default=1024)
@@ -103,7 +104,9 @@ if a.arch == "A":
         cfg = GPT2Config(vocab_size=v.size, n_positions=a.ctx, n_embd=a.n_embd, n_layer=a.n_layer, n_head=a.n_head,
                          resid_pdrop=a.dropout, embd_pdrop=a.dropout, attn_pdrop=a.dropout,
                          bos_token_id=v.BOS, eos_token_id=v.EOS, pad_token_id=v.PAD)
-    model = GPT2LMHeadModel._from_config(cfg, attn_implementation="sdpa")
+    model = (bl.ChordEmbGPT2 if a.chord_emb else GPT2LMHeadModel)._from_config(cfg, attn_implementation="sdpa")
+    if a.chord_emb:
+        model.setup_chord(v.chord_ids + [v.chord_N])
     if a.init_from:
         sd = model.state_dict(); n_copy = 0
         for k, t in ck["model"].items():

@@ -12,6 +12,8 @@ Arch B (T5 encoder-decoder):
 """
 import hashlib, json, os, random, subprocess
 import numpy as np
+import torch
+from transformers import GPT2LMHeadModel
 
 
 class Vocab:
@@ -123,3 +125,28 @@ def provenance(files):
          "torch": torch.__version__, "transformers": transformers.__version__}
     d["data_sha256"] = {os.path.basename(f): file_sha(f) for f in files}
     return d
+
+
+class ChordEmbGPT2(GPT2LMHeadModel):
+    """Arch A + in-attention chord conditioning: every token's input embedding also receives a learned embedding of the most
+    recent Chord_x token in the sequence (forward-filled), so the chord of the current bar is visible at every position, not only
+    at the chord token itself. Derived from input_ids only (generate with use_cache=False)."""
+    def setup_chord(self, chord_ids):
+        lut = torch.zeros(self.config.vocab_size, dtype=torch.long)
+        for k, t in enumerate(chord_ids):
+            lut[t] = k + 1
+        self.register_buffer("chord_lut", lut, persistent=False)
+        self.chord_emb = torch.nn.Embedding(len(chord_ids) + 1, self.config.n_embd)
+        torch.nn.init.normal_(self.chord_emb.weight, std=0.02)
+        with torch.no_grad():
+            self.chord_emb.weight[0].zero_()
+
+    def forward(self, input_ids=None, **kw):
+        if input_ids is not None and kw.get("inputs_embeds") is None:
+            c = self.chord_lut[input_ids]
+            pos = torch.arange(input_ids.shape[1], device=input_ids.device).expand_as(input_ids)
+            last = torch.where(c > 0, pos, torch.full_like(pos, -1)).cummax(1).values
+            cur = torch.where(last >= 0, torch.gather(c, 1, last.clamp(min=0)), torch.zeros_like(c))
+            kw["inputs_embeds"] = self.transformer.wte(input_ids) + self.chord_emb(cur)
+            input_ids = None
+        return super().forward(input_ids=input_ids, **kw)

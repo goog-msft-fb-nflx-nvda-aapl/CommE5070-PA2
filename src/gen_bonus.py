@@ -22,10 +22,14 @@ class LastIn(StoppingCriteria):
         return torch.isin(input_ids[:, -1].cpu(), self.ids).to(input_ids.device)
 
 
-def load(ckpt, dev):
+def load(ckpt, dev, tok2idx=None):
     ck = torch.load(ckpt, map_location="cpu")
     if ck["arch"] == "A":
-        m = GPT2LMHeadModel._from_config(GPT2Config(**ck["config"]), attn_implementation="sdpa")
+        if ck["args"].get("chord_emb"):
+            vv = bl.Vocab(json.load(open(tok2idx)))
+            m = bl.ChordEmbGPT2._from_config(GPT2Config(**ck["config"]), attn_implementation="sdpa"); m.setup_chord(vv.chord_ids + [vv.chord_N])
+        else:
+            m = GPT2LMHeadModel._from_config(GPT2Config(**ck["config"]), attn_implementation="sdpa")
     else:
         m = T5ForConditionalGeneration(T5Config(**ck["config"]))
     m.load_state_dict(ck["model"])
@@ -103,7 +107,7 @@ def gen_A(model, v, bars, L, chord, ctx, gen_kw, dev, max_bar_tokens=500, typed=
         slid += j > 0
         x = torch.tensor([ids], device=dev)
         g = model.generate(x, attention_mask=torch.ones_like(x), do_sample=True, max_new_tokens=max(max_new, 1),
-                           logits_processor=lp, stopping_criteria=stop, pad_token_id=v.PAD, **gen_kw)
+                           logits_processor=lp, stopping_criteria=stop, pad_token_id=v.PAD, use_cache=not hasattr(model, 'chord_emb'), **gen_kw)
         new = g[0, len(ids):].tolist()
         if new and new[-1] in (v.M, v.P, v.EOS):
             new = new[:-1]
@@ -200,7 +204,7 @@ if __name__ == "__main__":
 
     dev = "cuda"
     v = bl.Vocab(json.load(open(a.tok2idx)))
-    model, ck = load(a.ckpt, dev)
+    model, ck = load(a.ckpt, dev, a.tok2idx)
     arch, targs = ck["arch"], ck["args"]
     chord = targs["chord"] if a.chord is None else a.chord
     L = targs.get("lookahead", 1) if a.lookahead is None else a.lookahead
@@ -213,7 +217,7 @@ if __name__ == "__main__":
         temps = [a.temperature if x is None else x for x in tt]
         typed = TypedSampler({**v.t2i}, *temps, a.bar_bias, a.top_k, a.top_p, dev)
         gen_kw = dict(temperature=1.0, top_k=None, top_p=None)  # TypedSampler does all the sampling transforms
-    stage1 = load(a.chord_from, dev)[0] if a.chord_from else None
+    stage1 = load(a.chord_from, dev, a.tok2idx)[0] if a.chord_from else None
     os.makedirs(a.out_dir, exist_ok=True)
     records, tot_bad, tot_trunc, chord_hits, s1_hits = [], 0, 0, [], []
     for pr in json.load(open(a.prompts)):

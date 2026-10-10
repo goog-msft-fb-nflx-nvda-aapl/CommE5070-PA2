@@ -19,6 +19,8 @@ for job in "$@"; do
     F5_p4_chord)  U F5_p4_chord_full work/tok2idx_p4_chord.json work/seqs_p4_chord.json "";;
     F6_p4_ls)     U F6_p4_ls0.1_full work/tok2idx_p4.json work/seqs_p4.json "--label_smoothing 0.1";;
     FA1) BA FA1_A_L1_nochord_full "--lookahead 1 --chord 0";;
+    FA11) BA FA11_A_L1_chordboth_full "--lookahead 1 --chord 3";;
+    FA12) BA FA12_A_L1_chordboth_chordemb_full "--lookahead 1 --chord 3 --chord_emb 1";;
     FA2) BA FA2_A_L1_chordmel_full "--lookahead 1 --chord 1";;
     FA5) BA FA5_A_L0_chordmel_full "--lookahead 0 --chord 1";;
     FA6) BA FA6_A_L2_chordmel_full "--lookahead 2 --chord 1";;
