@@ -423,3 +423,19 @@ Finished full-data models (all 896 songs, `--val_frac 0`, last.pt): F1 (Task a, 
 Protocol check (dev run `DEV_bA2_10k`, A L1 + chord in melody segment, 10000-step cosine schedule, 5% held-out split): min val NLL 0.9861 (the earlier 20000-step dev schedule had min 0.9946 at step 8500), so the 10000-step A schedule is at least as good as the dev checkpoint it replaces.
 Crash found (not a result): the first launch of the MIDI-like (R1) and CP (R2) dev runs stopped with `ValueError: min() arg is an empty sequence` in `pitch_shift_range` when a random crop contained no notes (R1 at ~step 9000 with val NLL/REMI-token 1.525 @8500, R2 at ~step 4500 with 1.534 @4000; intermediate numbers not used). Fix: no shift for note-less crops; R1/R2 restarted from scratch (windows r1, r2, GPUs 2/3, 20000 steps).
 Scoring launched on the final models: post1 (Task a sweeps for F4/F5/F6, GPU 1), pb1 (bonus sweeps FA2, FA1, FA8, FA5, last.pt, GPU 2), pb2 (bonus sweeps F2 chord given, F2 two-stage with F3 stage-1, FA6, FA10, FA7, GPU 3); 4 sampling configs x 3 seeds each, 10 prompts, unmodified eval_bonus.py.
+
+## 2026-10-10 19:30 JST — FINAL (full-data) bonus models scored (best = last ckpt; 10 prompts x 16 bars; 3 seeds x 4 sampling configs; ranges over the 4 sampling configs of the 3-seed means; unmodified eval_bonus.py; rows `results/final/results_F*_full*.jsonl`)
+Controls: ceiling CA 0.7625 (real piano); wrong-song piano CA 0.0125, OA 0.846 / 0.384 / 0.649 / 0.464; round-trip OA ceilings at p=4: 0.980 / 0.973 / 0.870 / 0.745.
+| model (trained on all 896 songs) | chord input | CA | OA_P | OA_V | OA_D | OA_IOI |
+|---|---|---|---|---|---|---|
+| F2: B (T5 6+6), chord token in decoder, 40k steps | given (true labels) | 0.587-0.656 | 0.843-0.889 | 0.553-0.607 | 0.583-0.671 | 0.469-0.558 |
+| F2 + F3 two-stage (stage-1 chords from the melody, free-running chord acc 0.273) | none | 0.183-0.231 | 0.846-0.848 | 0.575-0.622 | 0.620-0.671 | 0.476-0.528 |
+| FA1: A L1, no chord | none | 0.146-0.179 | 0.847-0.860 | 0.534-0.572 | 0.642-0.675 | 0.470-0.533 |
+| FA7: A L1, chord predicted as first token of the piano segment (chord acc 0.138-0.198) | none | 0.121-0.175 | 0.844-0.859 | 0.510-0.550 | 0.661-0.694 | 0.444-0.535 |
+| FA2: A L1, chord in melody segment | given | 0.567-0.669 | 0.875-0.889 | 0.524-0.570 | 0.668-0.703 | 0.487-0.591 |
+| FA5: A L0, chord in melody segment | given | 0.544-0.600 | 0.881-0.889 | 0.515-0.553 | 0.639-0.686 | 0.478-0.521 |
+| FA6: A L2, chord in melody segment | given | 0.210-0.317 | 0.853-0.869 | 0.549-0.600 | 0.629-0.680 | 0.463-0.509 |
+| FA8: A L1, chord forced in piano segment | given | 0.483-0.544 | 0.880-0.887 | 0.516-0.572 | 0.661-0.698 | 0.494-0.528 |
+| FA10: A L2, chord forced in piano segment | given | 0.546-0.579 | 0.878-0.890 | 0.562-0.571 | 0.634-0.687 | 0.483-0.498 |
+Same picture as the dev runs: (1) CA depends on the chord input (given 0.48-0.67 vs none 0.12-0.23); (2) lookahead 2 with the chord in the melody segment collapses (0.21-0.32) and recovers when the chord sits in the piano segment (0.55-0.58); (3) the two-stage melody-only pipeline is the best no-chord setting (0.18-0.23 vs 0.12-0.18); (4) OA_V 0.51-0.62, OA_D 0.58-0.70, OA_IOI 0.44-0.59 across all models.
+Task a, F1 sweep: see the previous entry. Representation ablation: dev runs finished with val NLL per REMI-equivalent token R1 MIDI-like p4 = 1.2111 (best), R2 CP p4 = 1.2752 (best), vs REMI GPT-2 v2 (p4, dropout 0.3) 0.9523 (same 45 held-out songs; REMI measured per token of the REMI sequence, the others per REMI-equivalent token). Full-data versions R1f / R2f launched (GPUs 2/3, 20000 steps, `--val_frac 0`), p=16 bonus scoring pb3 (FB8 given chords + two-stage with FC4) on GPU 0.
