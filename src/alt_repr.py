@@ -255,6 +255,8 @@ def load_songs(seq_path, val_frac, seed):
 
 def pitch_shift_range(bars, kmax):
     ps = [e[2] for b in bars for e in b if e[0] == "N"]
+    if not ps:  # crop without notes: nothing to shift
+        return 0, 0
     return max(-kmax, 21 - min(ps)), min(kmax + 1, 108 - max(ps))
 
 
