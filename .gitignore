@@ -13,6 +13,9 @@
 !patches/
 !patches/**
 !results/
+!docs/
+!docs/**
+!sync_docs.sh
 !results/**
 __pycache__/
 *.pyc
