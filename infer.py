@@ -15,7 +15,7 @@ CK = lambda *p: os.path.join(HERE, "checkpoints", *p)
 VOC = lambda *p: os.path.join(HERE, "vocab", *p)
 SRC = lambda *p: os.path.join(HERE, "src", *p)
 
-UNCOND_CKPT = CK("uncond_w2_best.pt")      # GPT-2 8L x 512, pos_per_beat 16, dropout 0.3 (work run w2)
+UNCOND_CKPT = CK("uncond_final.pt")        # GPT-2 8L x 512, pos_per_beat 16, dropout 0.3, trained on all 896 training songs (run F1)
 UNCOND_VOCAB = VOC("tok2idx_p16.json")
 POS_PER_BEAT = "16"
 # Task a / b sampling configs (see README / report): name -> generate.py flags

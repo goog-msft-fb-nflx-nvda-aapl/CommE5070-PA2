@@ -6,3 +6,5 @@ numpy==2.2.6
 pretty_midi==0.2.11.post0
 pyfluidsynth==1.4.0
 soundfile==0.14.0
+pandas==2.3.3     # imported by scripts/eval_bonus.py (used to read the prompt beat/chord files)
+tqdm==4.70.1

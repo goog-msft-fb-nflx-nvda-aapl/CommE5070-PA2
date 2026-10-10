@@ -1,0 +1,23 @@
+{
+ "melody_only": {
+  "ckpt": "bonus_final.pt",
+  "stage1": "bonus_stage1.pt",
+  "flags": [
+   "--temperature",
+   "0.9",
+   "--top_p",
+   "0.9"
+  ],
+  "note": "stage-1 chord predictor (melody -> chords) feeds the chord-conditioned accompaniment model; no chord file is read"
+ },
+ "chord_given": {
+  "ckpt": "bonus_final.pt",
+  "flags": [
+   "--temperature",
+   "0.9",
+   "--top_p",
+   "0.9"
+  ],
+  "note": "uses the chord labels (chord_midi.txt) of the prompt folder as input"
+ }
+}
