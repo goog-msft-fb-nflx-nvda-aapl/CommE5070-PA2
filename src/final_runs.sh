@@ -32,6 +32,8 @@ for job in "$@"; do
     FB1) BB FB1_B_nochord_full "--chord 0";;
     FB2) BB FB2_B_encchord_full "--chord 1";;
     FB5) BB FB5_B_predchord_full "--chord 4";;
+    FB9)  BB FB9_B_decchord_relpos128_full "--chord 2 --rel_buckets 128 --rel_maxdist 1024" 40000;;
+    FB10) BB FB10_B_decchord_small_full "--chord 2 --n_layer 4 --n_embd 256 --n_head 4 --d_ff 1024" 40000;;
     FB8_p16) BB16 FB8_B_decchord_p16_full "--chord 2";;
     FC4_p16) BC16 FC4_C_p16_full;;
   esac

@@ -14,6 +14,8 @@ p.add_argument("--out_dir", required=True)
 p.add_argument("--lookahead", type=int, default=1)
 p.add_argument("--chord", type=int, default=0, help="1: per-bar chord token in the melody conditioning")
 p.add_argument("--chord_emb", type=int, default=0, help="A: 1 = in-attention chord embedding (use with --chord 3)")
+p.add_argument("--rel_buckets", type=int, default=32, help="B: T5 relative_attention_num_buckets")
+p.add_argument("--rel_maxdist", type=int, default=256, help="B: T5 relative_attention_max_distance")
 p.add_argument("--melody_w", type=float, default=0.0, help="A: loss weight on melody/condition tokens")
 p.add_argument("--ctx", type=int, default=2048, help="A: context; B: decoder max length")
 p.add_argument("--enc_ctx", type=int, default=1024)
@@ -118,7 +120,7 @@ if a.arch == "A":
 else:
     cfg = T5Config(vocab_size=v.size, d_model=a.n_embd, d_kv=a.n_embd // a.n_head, d_ff=a.d_ff, num_layers=a.n_layer,
                    num_decoder_layers=a.n_layer, num_heads=a.n_head, dropout_rate=a.dropout,
-                   relative_attention_num_buckets=32, relative_attention_max_distance=256,
+                   relative_attention_num_buckets=a.rel_buckets, relative_attention_max_distance=a.rel_maxdist,
                    decoder_start_token_id=v.BOS, pad_token_id=v.PAD, eos_token_id=v.EOS)
     model = T5ForConditionalGeneration(cfg)
 model = model.to(dev)

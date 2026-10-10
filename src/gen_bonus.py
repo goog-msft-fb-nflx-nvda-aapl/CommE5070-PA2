@@ -71,6 +71,24 @@ def parse_piano(bar_tokens, note_fn, P):
     return notes, bad
 
 
+def rerank_score(per_bar, bars, note_fn, P):
+    """fraction of bars (with a conditioning chord label) whose generated chord, estimated by eval_bonus.estimate_chord, equals it"""
+    import importlib.util
+    here = os.path.dirname(os.path.abspath(__file__))
+    spec = importlib.util.spec_from_file_location("eval_bonus", os.path.join(here, "..", "scripts", "eval_bonus.py"))
+    eb = importlib.util.module_from_spec(spec); spec.loader.exec_module(eb)
+    notes, _ = parse_piano(per_bar, note_fn, P)
+    arr = eb.note_arrays(notes)
+    starts = [note_fn(b, 0, 0)[0] for b in range(len(bars))]
+    hits = n = 0
+    for b in range(len(bars)):
+        if bars[b]["c"] < 0:
+            continue
+        t0 = starts[b]; t1 = starts[b + 1] if b + 1 < len(bars) else t0 + (t0 - starts[b - 1])
+        hits += int(eb.estimate_chord(arr, t0, t1) == bars[b]["c"]); n += 1
+    return hits / max(n, 1)
+
+
 def prefix_for(bars, gen, j, i, L, chord, v):
     """context (training-crop layout starting at bar j) right before piano bar i is generated"""
     ids = [v.BOS]
@@ -199,6 +217,7 @@ if __name__ == "__main__":
     ap.add_argument("--tag", default="")
     ap.add_argument("--chord_from", default=None, help="stage-1 chord predictor ckpt (arch C): chords for the stage-2 model come from the melody only")
     ap.add_argument("--chord_from_sample", type=int, default=0, help="1: sample stage-1 chords (T=1) instead of greedy")
+    ap.add_argument("--best_of", type=int, default=1, help="N candidates per prompt, keep the one whose chords (24-triad estimator of eval_bonus) agree most with the conditioning chords of the bars (given or stage-1 predicted); needs chord_input != 0")
     ap.add_argument("--chord_shuffle", type=int, default=0, help="control: permute the chord labels across the bars of each prompt")
     a = ap.parse_args()
 
@@ -219,7 +238,7 @@ if __name__ == "__main__":
         gen_kw = dict(temperature=1.0, top_k=None, top_p=None)  # TypedSampler does all the sampling transforms
     stage1 = load(a.chord_from, dev, a.tok2idx)[0] if a.chord_from else None
     os.makedirs(a.out_dir, exist_ok=True)
-    records, tot_bad, tot_trunc, chord_hits, s1_hits = [], 0, 0, [], []
+    records, tot_bad, tot_trunc, chord_hits, s1_hits, sel_scores = [], 0, 0, [], [], []
     for pr in json.load(open(a.prompts)):
         bars = bl.to_bars(pr, v)
         if stage1 is not None:  # chords predicted from the melody only (no chord file used)
@@ -238,13 +257,23 @@ if __name__ == "__main__":
             labs = [b["c"] for b in bars]
             for b, k in zip(bars, perm):
                 b["c"] = labs[k]
-        per_bar, trunc, pred = (gen_A(model, v, bars, L, chord, ctx, gen_kw, dev, typed=typed) if arch == "A"
-                                else gen_B(model, v, bars, chord, ctx, gen_kw, dev, typed))
+        note_fn = grid_time(pr["beat_times"], pr["beat_info"], a.pos_per_beat)
+        best = None
+        for _cand in range(max(1, a.best_of)):
+            pb_, tr_, pd_ = (gen_A(model, v, bars, L, chord, ctx, gen_kw, dev, typed=typed) if arch == "A"
+                             else gen_B(model, v, bars, chord, ctx, gen_kw, dev, typed))
+            if a.best_of <= 1:
+                best = (0, pb_, tr_, pd_); break
+            sc = rerank_score(pb_, bars, note_fn, a.pos_per_beat)
+            if best is None or sc > best[0]:
+                best = (sc, pb_, tr_, pd_)
+        per_bar, trunc, pred = best[1], best[2], best[3]
+        if a.best_of > 1:
+            sel_scores.append(best[0])
         if chord == 4:  # accuracy of the model's own chord prediction vs the annotation (bars with a usable label)
             for b, pc in zip(bars, pred):
                 if b["c"] >= 0:
                     chord_hits.append(int(pc == v.chord_ids[b["c"]]))
-        note_fn = grid_time(pr["beat_times"], pr["beat_info"], a.pos_per_beat)
         notes, bad = parse_piano(per_bar, note_fn, a.pos_per_beat)
         tot_bad += bad; tot_trunc += trunc
         mel = pretty_midi.PrettyMIDI(os.path.join(a.prompt_dir, pr["song"], "melody.mid"))
@@ -268,7 +297,7 @@ if __name__ == "__main__":
         row = {"ckpt": a.ckpt, "ckpt_sha": sha(a.ckpt), "arch": arch, "chord_input": chord, "lookahead": L if arch == "A" else None,
                "temperature": a.temperature, "top_k": a.top_k, "top_p": a.top_p, "bar_bias": a.bar_bias, "t_struct": a.t_struct, "t_pitch": a.t_pitch, "t_vel": a.t_vel, "t_dur": a.t_dur, "seed": a.seed, "tag": a.tag, "chord_shuffle": a.chord_shuffle,
                "pred_chord_acc": (float(np.mean(chord_hits)) if chord_hits else (float(np.mean(s1_hits)) if s1_hits else None)),
-               "chord_from": a.chord_from,
+               "chord_from": a.chord_from, "best_of": a.best_of, "selected_conditioning_chord_agreement": (float(np.mean(sel_scores)) if sel_scores else None),
                "metrics": m, "malformed": tot_bad, "truncated_bars": tot_trunc, "notes_per_bar": float(np.mean([r["n_notes"] for r in records]) / 16),
                "code_sha256": {f: sha(os.path.join(here, f)) for f in ["gen_bonus.py", "bonus_lib.py", "generate.py"]},
                "train_args": targs}
