@@ -461,3 +461,30 @@ Task a, F1 sweep: see the previous entry. Representation ablation: dev runs fini
 Same pattern as the dev models: Bar bias 3 gives real-like density (22.1-22.4) and, at p=4, real-like GS (0.891 / 0.903 vs 0.887) without a clear change in H4; chord tokens do not change H4/GS clearly (F5 vs F4 within the seed sd); label smoothing breaks free sampling (up to 28,634 malformed tokens in 60 pieces). F1 (p16) vs F4 (p4) at bias 3: H1 2.105 vs 1.999, H4 2.594 vs 2.545, GS 0.966 vs 0.891 (each vs its own real GS 0.962 / 0.887).
 Status: R1f / R2f (full-data MIDI-like / CP) trained; their Task a sweeps run in window post2 (GPU 1; MIDI-like: 4 configs, no Bar bias; CP: 5 configs incl. Bar bias); FB1 (B no chord) done, FB2 (encoder chord) training, FB5 (predicted chord) queued; bonus sweeps for FB1/FB2/FB5 queued in pb4 (GPU 2).
 Note (20:55 JST): the first launch of the p=16 bonus scoring (window pb3) never ran (a shell variable was lost in the launch command; no rows were produced); relaunched with explicit paths (FB8 given chords, then FB8 + FC4 two-stage).
+
+## 2026-10-10 23:30 JST — FINAL (full-data) representation ablation, bonus p16 and B ablations
+Representation ablation, Task a (all 896 songs, 8L x 512 x 8h, dropout 0.3, 20000 steps, p=4 grid, 3 seeds x 20 pieces, unmodified eval_basic; real p4: H1 2.118 / H4 2.617 / GS 0.887, 20.6 notes/bar; rows `results/final/results_R{1,2}f_*`). MIDI-like has no Bar-bias analogue (4 configs).
+| representation | sampling | H1 | H4 | GS | notes/bar | malformed |
+|---|---|---|---|---|---|---|
+| REMI (F4) | pure | 2.122 +- 0.030 | 2.568 +- 0.039 | 0.919 +- 0.004 | 27.6 | 115 |
+| REMI (F4) | pure + Bar bias 3 | 1.999 +- 0.081 | 2.545 +- 0.056 | 0.891 +- 0.009 | 22.1 | 844 |
+| REMI + chord tokens (F5) | pure | 2.148 +- 0.024 | 2.532 +- 0.062 | 0.924 +- 0.005 | 28.6 | 94 |
+| MIDI-like (R1f) | pure | 1.917 +- 0.041 | 2.141 +- 0.071 | 0.837 +- 0.024 | 28.1 | 0 |
+| MIDI-like | T1.0 top-p 0.95 | 1.727 +- 0.031 | 1.788 +- 0.029 | 0.883 +- 0.012 | 31.2 | 0 |
+| MIDI-like | T0.9 top-p 0.9 | 1.627 +- 0.068 | 1.647 +- 0.073 | 0.940 +- 0.003 | 30.4 | 0 |
+| MIDI-like | T1.2 top-k 5 | 1.876 +- 0.094 | 2.029 +- 0.101 | 0.844 +- 0.013 | 30.7 | 0 |
+| Compound Word (R2f) | pure | 2.099 +- 0.028 | 2.566 +- 0.022 | 0.825 +- 0.016 | 19.4 | 56 |
+| CP | pure + Bar bias 3 | 1.729 +- 0.053 | 2.322 +- 0.027 | 0.869 +- 0.010 | 10.3 | 0 |
+| CP | T1.0 top-p 0.95 | 2.154 +- 0.041 | 2.491 +- 0.024 | 0.902 +- 0.012 | 27.3 | 0 |
+| CP | T0.9 top-p 0.9 | 2.046 +- 0.031 | 2.277 +- 0.051 | 0.959 +- 0.004 | 33.8 | 0 |
+| CP | T1.2 top-k 5 | 2.053 +- 0.017 | 2.396 +- 0.023 | 0.829 +- 0.005 | 20.6 | 408 |
+Positive control for the MIDI-like codec (`src/ctrl_midilike_real.py`): the 1864 real 32-bar crops pushed through the MIDI-like normalization + encode/decode and scored by the unmodified eval_basic give H1 2.1259 / H4 2.6211 / GS 0.8903 (real 2.118 / 2.617 / 0.887), so the poor MIDI-like generation scores are due to the model, not the representation codec. Dev validation (NLL per REMI-equivalent token, 45 held-out songs): REMI GPT-2 0.952, MIDI-like 1.211, CP 1.275.
+Reading: with the same backbone, size and training budget, REMI is closest to the real data on H1/H4/GS; MIDI-like loses pitch-class entropy (H4 1.65-2.14 vs 2.62) and rhythmic consistency; CP at T=1.0 is close to the real density (19.4 notes/bar) and H4 (2.566) but has lower GS (0.825 vs 0.887), and the REMI-style Bar bias (a logit shift on the CP type head) over-sparsifies it (10.3 notes/bar).
+Bonus p=16 and B ablations (full data, last.pt; 10 prompts; 3 seeds per config; ranges over the 4 sampling configs):
+| model | chord input | CA | OA_P | OA_V | OA_D | OA_IOI |
+|---|---|---|---|---|---|---|
+| FB8: B, chord in decoder, p=16, 40k | given | 0.442-0.544 | 0.877-0.889 | 0.575-0.612 | 0.686-0.722 | 0.511-0.551 |
+| FB8 + FC4 two-stage (p=16 stage 1, free-running chord acc 0.307) | none | 0.200-0.235 | 0.853-0.861 | 0.579-0.625 | 0.698-0.727 | 0.536-0.578 |
+| FB1: B, no chord, 20k | none | 0.131-0.148 | 0.829-0.862 | 0.549-0.622 | 0.636-0.729 | 0.427-0.505 |
+| FB2: B, chord in encoder, 20k | given | 0.156-0.204 | 0.787-0.866 | 0.527-0.604 | 0.614-0.720 | 0.403-0.524 |
+(FB5 predicted-chord B is still being scored.) p=16 vs p=4 for the chord-given B model (F2 CA 0.587-0.656, OA_D 0.583-0.671, OA_IOI 0.469-0.558): p=16 has higher OA_D (0.686-0.722) and OA_IOI (0.511-0.551) but lower CA (0.442-0.544); the encoder-chord B model (FB2) stays at 0.16-0.20, i.e. it does not use the chord input effectively, as in the dev runs.
