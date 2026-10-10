@@ -165,7 +165,7 @@ def evaluate():
     model.eval(); tot = cnt = 0.0
     for i in range(0, len(val_ex), 16):
         l, n = loss_of(collate(val_ex[i:i + 16])); tot += l.item(); cnt += n.item()
-    model.train(); return tot / cnt
+    model.train(); return tot / cnt if cnt else float('nan')  # nan when val_frac 0
 
 def save(name):
     torch.save({"model": model.state_dict(), "config": cfg.to_dict(), "args": vars(a), "arch": a.arch}, os.path.join(a.out_dir, name))
@@ -188,7 +188,7 @@ for step in range(1, a.steps + 1):
         val = evaluate()
         rec = {"step": step, "train_loss": (l / n).item(), "val_nll": val, "elapsed_s": time.time() - t0}
         if a.arch == "C":
-            rec["val_chord_top1_teacher_forced"] = loss_of.acc_hit / max(loss_of.acc_n, 1); loss_of.acc_hit = loss_of.acc_n = 0
+            rec["val_chord_top1_teacher_forced"] = getattr(loss_of, "acc_hit", 0) / max(getattr(loss_of, "acc_n", 0), 1); loss_of.acc_hit = loss_of.acc_n = 0
         log.write(json.dumps(rec) + "\n"); log.flush(); print("EVAL", rec, flush=True)
         if val < best:
             best = val; save("best.pt")

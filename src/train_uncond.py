@@ -158,7 +158,7 @@ def evaluate():
         l, n = loss_fn(x.to(dev), y.to(dev))
         tot += l.item(); cnt += n.item()
     model.train()
-    return tot / cnt
+    return tot / cnt if cnt else float('nan')  # nan when no validation songs are held out (val_frac 0)
 
 def save(name):
     torch.save({"model": model.state_dict(), "config": cfg.to_dict(), "args": vars(a)}, os.path.join(a.out_dir, name))
