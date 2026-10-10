@@ -78,7 +78,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="task", required=True)
     u = sub.add_parser("uncond"); u.add_argument("--out_dir", required=True); u.add_argument("--n", type=int, default=20)
-    u.add_argument("--seed", type=int, default=0); u.add_argument("--config", default="cfg2_T1.0_barbias3", choices=list(CONFIGS))
+    u.add_argument("--seed", type=int, default=0); u.add_argument("--config", default="cfg1_T1.0_pure", choices=list(CONFIGS))
     c = sub.add_parser("continue"); c.add_argument("--prompt_dir", required=True); c.add_argument("--out_dir", required=True)
     c.add_argument("--seed", type=int, default=0)
     b = sub.add_parser("bonus"); b.add_argument("--prompt_dir", required=True); b.add_argument("--out_dir", required=True)
