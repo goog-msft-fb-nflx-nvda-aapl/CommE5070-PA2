@@ -500,3 +500,19 @@ Config: ckpt work/runs/FB5_B_predchord_full/last.pt (sha b7769c91e181670a), seed
 CA mean over 3 seeds: T1.0 pure 0.140; T1.0 top_p0.95 0.127; T0.9 top_p0.9 0.163; T1.2 top_k5 0.129. Predicted-chord accuracy 0.14-0.18.
 Measured: comparable to FB2/FB1 band (0.13-0.20), below two-stage (0.18-0.23) and chord-given (0.55-0.67).
 Task a decision (user asked to pick the best performer): default switched to pure (cfg1), closer to real on H4 and GS and on dev SI; bias3 kept as ablation.
+
+## 2026-10-11 in-attention chord embedding (arch A), launched
+Implementation: `bonus_lib.ChordEmbGPT2` adds a learned embedding of the most recent Chord_x token in the sequence (forward-filled) to every token embedding; train_bonus `--chord_emb 1`; gen_bonus loads it and generates with use_cache=False (the chord is recomputed from input_ids). Smoke test: 60 steps run.
+Jobs (full data, `--val_frac 0`, 10000 steps, dropout 0.3, lookahead 1, seed 0, last.pt, GPU 1, tmux `ce`): FA11 = chord 3 (chord token given in melody and piano segments, no embedding; control), FA12 = chord 3 + chord_emb 1. Then sweep_bonus (4 sampling configs x 3 seeds) for both.
+
+## 2026-10-11 in-attention chord embedding scored (arch A, p4, full data, 10000 steps, dropout 0.3, L1, last.pt, seed 0 train; 4 sampling configs x 3 gen seeds x 10 prompts; eval_bonus unmodified; rows results/final/results_FA11_*.jsonl, results_FA12_*.jsonl)
+Chord given (annotation), chord mode 3 (chord token in both the melody and the piano segment). FA11 = no embedding (control), FA12 = + `ChordEmbGPT2` (learned embedding of the latest Chord_x token added to every token's embedding). CA-ceiling 0.762.
+| sampling | FA11 CA | FA12 CA | FA12 DP / DV / DD / DIOI |
+|---|---|---|---|
+| T1.0 pure | 0.494 | 0.629 | 0.885 / 0.573 / 0.690 / 0.472 |
+| T1.0 top_p 0.95 | 0.579 | 0.660 | 0.885 / 0.558 / 0.666 / 0.519 |
+| T0.9 top_p 0.9 | 0.583 | 0.646 | 0.890 / 0.552 / 0.683 / 0.511 |
+| T1.2 top_k 5 | 0.546 | 0.631 | 0.886 / 0.579 / 0.677 / 0.492 |
+Measured: +0.063 to +0.135 CA over the control per sampling config. FA12 (0.629-0.660) is in the same band as FA2 (0.567-0.669) and F2 (0.587-0.656); OA unchanged within ~0.03. Single training seed each, so the difference between FA12 and FA2/F2 is not resolved.
+Round-2 research (round2_research response D, round2_research response B; read, claims not verified by us) turned into the queue below. Qwen: unverifiable citations (one arXiv id looks malformed), generic. Gemini: has T5 relative-position bucket advice (buckets 128, max distance 1024, d256 4+4), best-of-N rerank, pitch-only repetition penalty, RoPE/ALiBi for 4k contexts.
+Queue (each logged with config): FB9 = B chord-in-decoder, rel buckets 128 / max dist 1024 (40000 steps); FB10 = B chord-in-decoder d256 4+4 (40000 steps) [tmux rb, GPU 2]; best-of-8 by agreement with the conditioning chords (gen_bonus --best_of 8; given-chord F2 and two-stage F2+F3, T0.9 p0.9, 3 seeds) [tmux bon, GPU 1]. Note: best-of-N uses the chord estimator of the evaluation script against the same chord labels the metric scores (given mode) or against stage-1 predictions (two-stage); this is metric-guided selection and is reported as a separate labeled variant, not the headline.
