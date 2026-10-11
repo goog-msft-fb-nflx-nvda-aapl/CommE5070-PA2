@@ -54,5 +54,5 @@ Prepared (CPU-side, 2026-10-07): `src/bonus_data.py` (run OK), `src/bonus_lib.py
 - [x] Best-of-8 by chord agreement (given 0.91-0.93, two-stage 0.256)
 - [x] F7 RoPE/llama-style Task a model + sweep
 - [x] SI on final F1 sets (pure closest to real)
-- [x] chord-conditioned logit bias (given CA 0.75-0.92); [ ] pitch-only repetition penalty not run
+- [x] chord-conditioned logit bias (given CA 0.75-0.92); [x] pitch-only repetition penalty run (H1/H4 move away from real; not used)
 - [ ] Task a final 20 .mid/.wav (pure default), Task b regenerate from F1, bonus 10 .mid/.wav

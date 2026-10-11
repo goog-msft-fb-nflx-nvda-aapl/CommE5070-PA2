@@ -1,0 +1,5 @@
+{
+ "T1.0_rep0.5": {"temperature": 1.0, "rep_alpha": 0.5, "rep_win": 128},
+ "T1.0_rep1": {"temperature": 1.0, "rep_alpha": 1.0, "rep_win": 128},
+ "T1.0_rep2": {"temperature": 1.0, "rep_alpha": 2.0, "rep_win": 128}
+}

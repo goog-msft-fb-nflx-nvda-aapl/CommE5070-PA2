@@ -25,7 +25,7 @@ SAMPLING = {  # name: params
 }
 if a.sampling_file:
     SAMPLING = json.load(open(a.sampling_file))
-EXTRA = ["t_struct", "t_pitch", "t_vel", "t_dur", "bar_bias"]
+EXTRA = ["t_struct", "t_pitch", "t_vel", "t_dur", "bar_bias", "rep_alpha", "rep_win"]
 here = os.path.dirname(os.path.abspath(__file__))
 
 def quarters(toks):

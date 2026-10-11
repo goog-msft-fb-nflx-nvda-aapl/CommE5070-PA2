@@ -73,8 +73,9 @@ class TypedSampler(LogitsProcessor):
     The type of the next token follows from the last token of the TA grammar
     (Bar/BOS/Dur/Tempo -> struct: Pos or Bar ; Pos -> pitch (or Tempo) ; Pitch -> vel ; Vel -> dur),
     and each type has its own temperature. bar_bias is added to the Bar logit at struct steps."""
-    def __init__(self, v, t_struct, t_pitch, t_vel, t_dur, bar_bias, top_k, top_p, dev):
+    def __init__(self, v, t_struct, t_pitch, t_vel, t_dur, bar_bias, top_k, top_p, dev, rep_alpha=0.0, rep_win=128):
         self.bar_id, self.bar_bias, self.top_k, self.top_p = v["Bar"], bar_bias, top_k, top_p
+        self.rep_alpha, self.rep_win = rep_alpha, rep_win
         V = max(i for i in v.values() if isinstance(i, int)) + 1
         nxt = torch.zeros(V, dtype=torch.long)  # default 0 = struct (BOS, Bar, Dur, Tempo)
         for k, i in v.items():
@@ -84,11 +85,20 @@ class TypedSampler(LogitsProcessor):
             elif k.startswith("Pitch_"): nxt[i] = 2
             elif k.startswith("Vel_"): nxt[i] = 3
         self.nxt = nxt.to(dev)
+        self.is_pitch = torch.zeros(V, dtype=torch.bool)
+        for k, i in v.items():
+            if isinstance(i, int) and k.startswith("Pitch_"):
+                self.is_pitch[i] = True
+        self.is_pitch = self.is_pitch.to(dev)
         self.temps = torch.tensor([t_struct, t_pitch, t_vel, t_dur], dtype=torch.float32, device=dev)
     def __call__(self, input_ids, scores):
         ty = self.nxt[input_ids[:, -1]]
         scores = scores.float() / self.temps[ty][:, None]
         scores[:, self.bar_id] += torch.where(ty == 0, self.bar_bias, 0.0)
+        if self.rep_alpha:  # pitch-only repetition penalty: alpha x (number of times this exact pitch occurs among the last rep_win tokens)
+            w = input_ids[:, -self.rep_win:]
+            cnt = torch.zeros_like(scores).scatter_add_(1, w, self.is_pitch[w].float())
+            scores = scores - self.rep_alpha * cnt * (ty == 1).float()[:, None]
         if self.top_k > 0:
             kth = torch.topk(scores, self.top_k, dim=-1).values[:, -1:]
             scores = scores.masked_fill(scores < kth, -float("inf"))
@@ -138,7 +148,7 @@ def sample(model, prompt_ids, n, n_bars, v, temperature, top_k, top_p, ctx, chun
     lp = LogitsProcessorList([NoSpecial([v["<PAD>"], v["<BOS>"], v["<EOS>"]])])
     gen_kw = dict(do_sample=True, temperature=temperature, top_k=top_k if top_k > 0 else None, top_p=top_p if top_p < 1 else None)
     if typed is not None:  # own sampling transform; HF warpers off
-        lp.append(TypedSampler(v, *typed["temps"], typed["bar_bias"], top_k, top_p, dev))
+        lp.append(TypedSampler(v, *typed["temps"], typed["bar_bias"], top_k, top_p, dev, typed.get("rep_alpha", 0.0), typed.get("rep_win", 128)))
         gen_kw = dict(do_sample=True, temperature=1.0, top_k=None, top_p=None)
     if greedy:  # deterministic decoding: argmax (num_beams=1) or beam search (applied chunk by chunk)
         gen_kw = dict(do_sample=False, num_beams=num_beams)
@@ -190,6 +200,8 @@ if __name__ == "__main__":
     ap.add_argument("--t_dur", type=float, default=None)
     ap.add_argument("--greedy", type=int, default=0, help="1: deterministic decoding (argmax, or beam search with --num_beams > 1)")
     ap.add_argument("--num_beams", type=int, default=1)
+    ap.add_argument("--rep_alpha", type=float, default=0.0, help="pitch-only repetition penalty strength (logit units per occurrence in the last --rep_win tokens)")
+    ap.add_argument("--rep_win", type=int, default=128)
     ap.add_argument("--bar_bias", type=float, default=0.0, help="added to the Bar logit at Pos/Bar choice steps")
     a = ap.parse_args()
 
@@ -202,8 +214,8 @@ if __name__ == "__main__":
     os.makedirs(a.out_dir, exist_ok=True)
     torch.manual_seed(a.seed); np.random.seed(a.seed)
     tt = [a.t_struct, a.t_pitch, a.t_vel, a.t_dur]
-    typed = None if (all(x is None for x in tt) and a.bar_bias == 0.0) else \
-        {"temps": [a.temperature if x is None else x for x in tt], "bar_bias": a.bar_bias}
+    typed = None if (all(x is None for x in tt) and a.bar_bias == 0.0 and a.rep_alpha == 0.0) else \
+        {"temps": [a.temperature if x is None else x for x in tt], "bar_bias": a.bar_bias, "rep_alpha": a.rep_alpha, "rep_win": a.rep_win}
     jobs = []  # (name, prompt_ids, n)
     if a.mode == "uncond":
         jobs.append((a.tag, [t2i["<BOS>"]], a.n))

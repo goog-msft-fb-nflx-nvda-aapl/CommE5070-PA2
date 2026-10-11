@@ -558,3 +558,12 @@ SI of the final Task a sets (seed 0, 20 pieces each, p16 F1 / F7, same SI code a
 | F1 T1.0 top_p0.95 | 0.528 | 0.517 | 0.449 |
 | F7 (RoPE) pure | 0.287 | 0.257 | 0.212 |
 Measured: pure is closest to real among the F1 configs on all three SI scales; truncated sampling (p0.9, p0.95) gives far higher SI than real. This supports the pure default for Task a.
+
+## 2026-10-11 pitch-only repetition penalty, Task a (F1 last.pt, p16, T1.0, 3 seeds x 20 pieces; rows results/final/results_F1_reppen_s{0,1,2}.jsonl; sampling file results/sampling_taska_reppen.json)
+Penalty: at pitch-choice steps, logit of pitch p -= alpha x (occurrences of p among the last 128 tokens); `generate.py --rep_alpha`. (First launch had a bug, penalty applied to the wrong token type, results identical to pure sampling; deleted and rerun after the fix.) Real data H1 2.118 / H4 2.617 / GS 0.887; F1 pure 2.169 / 2.600 / 0.963.
+| alpha | H1 | H4 | GS | malformed (60 pieces) |
+|---|---|---|---|---|
+| 0.5 | 2.419 | 2.914 | 0.961 | 219 |
+| 1 | 2.576 | 3.079 | 0.965 | 236 |
+| 2 | 2.849 | 3.359 | 0.962 | 575 |
+Measured: the penalty raises H1 and H4 far above the real values (0.30-0.73 above for H1) with no change in GS, so it moves the pitch entropy away from real data; not used. No planned experiment remains unrun.
