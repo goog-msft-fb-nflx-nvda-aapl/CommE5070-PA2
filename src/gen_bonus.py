@@ -33,7 +33,7 @@ def load(ckpt, dev, tok2idx=None):
             m = GPT2LMHeadModel._from_config(GPT2Config(**ck["config"]), attn_implementation="sdpa")
     else:
         m = T5ForConditionalGeneration(T5Config(**ck["config"]))
-    m.load_state_dict(ck["model"])
+    m.load_state_dict({k: x for k, x in ck["model"].items() if not k.startswith("chord_head")})  # the auxiliary chord head is training-only
     return m.to(dev).eval(), ck
 
 

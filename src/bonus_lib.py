@@ -78,21 +78,25 @@ def m_segment(b, v, use_chord):
     return [v.M] + ([v.chord_tok(b["c"])] if use_chord in (1, 3) else []) + b["m"].tolist()
 
 
-def build_A(bars, v, L, use_chord, melody_w):
-    ids, w = [v.BOS], [0.0]
+def build_A(bars, v, L, use_chord, melody_w, aux=False):
+    """aux=True also returns per-token auxiliary chord targets: for the <P> tag and every piano token of bar i the chord class of bar i
+    (0..23, 24 = no usable label), -100 elsewhere (used by the chord auxiliary loss; the model never sees these at inference)."""
+    ids, w, ax = [v.BOS], [0.0], [-100]
     prev_p = False
+    cls = lambda b: 24 if b["c"] < 0 else b["c"]
     for kind, i in schedule(len(bars), L):
         if kind == "M":
             seg = m_segment(bars[i], v, use_chord)
             w += [1.0 if prev_p else melody_w] + [melody_w] * (len(seg) - 1)
-            ids += seg; prev_p = False
+            ids += seg; ax += [-100] * len(seg); prev_p = False
         else:
-            ids.append(v.P); w.append(1.0 if prev_p else 0.0)
+            ids.append(v.P); w.append(1.0 if prev_p else 0.0); ax.append(cls(bars[i]))
             if use_chord in (2, 3, 4):  # chord token at the start of the piano segment: forced (2,3: no loss) or predicted (4: loss)
-                ids.append(v.chord_tok(bars[i]["c"])); w.append(1.0 if use_chord == 4 else 0.0)
-            p = bars[i]["p"].tolist(); ids += p; w += [1.0] * len(p); prev_p = True
-    ids.append(v.EOS); w.append(1.0)
-    return np.array(ids, dtype=np.int64), np.array(w, dtype=np.float32)
+                ids.append(v.chord_tok(bars[i]["c"])); w.append(1.0 if use_chord == 4 else 0.0); ax.append(cls(bars[i]))
+            p = bars[i]["p"].tolist(); ids += p; w += [1.0] * len(p); ax += [cls(bars[i])] * len(p); prev_p = True
+    ids.append(v.EOS); w.append(1.0); ax.append(-100)
+    out = (np.array(ids, dtype=np.int64), np.array(w, dtype=np.float32))
+    return out + (np.array(ax, dtype=np.int64),) if aux else out
 
 
 def build_B(bars, v, use_chord):
@@ -125,6 +129,8 @@ def provenance(files):
          "torch": torch.__version__, "transformers": transformers.__version__}
     d["data_sha256"] = {os.path.basename(f): file_sha(f) for f in files}
     return d
+
+
 
 
 class ChordEmbGPT2(GPT2LMHeadModel):

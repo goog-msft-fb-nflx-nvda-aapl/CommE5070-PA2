@@ -16,6 +16,7 @@ p.add_argument("--chord", type=int, default=0, help="1: per-bar chord token in t
 p.add_argument("--chord_emb", type=int, default=0, help="A: 1 = in-attention chord embedding (use with --chord 3)")
 p.add_argument("--rel_buckets", type=int, default=32, help="B: T5 relative_attention_num_buckets")
 p.add_argument("--rel_maxdist", type=int, default=256, help="B: T5 relative_attention_max_distance")
+p.add_argument("--chord_aux", type=float, default=0.0, help="A: weight of the auxiliary chord-classification loss on the piano-segment hidden states (head dropped at inference)")
 p.add_argument("--melody_w", type=float, default=0.0, help="A: loss weight on melody/condition tokens")
 p.add_argument("--ctx", type=int, default=2048, help="A: context; B: decoder max length")
 p.add_argument("--enc_ctx", type=int, default=1024)
@@ -57,9 +58,9 @@ def make_example(bars):
     n = len(bars)
     while n > 1:
         if a.arch == "A":
-            ids, w = bl.build_A(bars[:n], v, a.lookahead, a.chord, a.melody_w)
-            if len(ids) <= a.ctx:
-                return ids, w
+            r = bl.build_A(bars[:n], v, a.lookahead, a.chord, a.melody_w, aux=a.chord_aux > 0)
+            if len(r[0]) <= a.ctx:
+                return r
         else:
             enc, dec = bl.build_C(bars[:n], v) if a.arch == "C" else bl.build_B(bars[:n], v, a.chord)
             if len(enc) <= a.enc_ctx and len(dec) <= a.ctx:
@@ -109,6 +110,8 @@ if a.arch == "A":
     model = (bl.ChordEmbGPT2 if a.chord_emb else GPT2LMHeadModel)._from_config(cfg, attn_implementation="sdpa")
     if a.chord_emb:
         model.setup_chord(v.chord_ids + [v.chord_N])
+    if a.chord_aux > 0:
+        model.chord_head = torch.nn.Linear(cfg.n_embd, 25)
     if a.init_from:
         sd = model.state_dict(); n_copy = 0
         for k, t in ck["model"].items():
@@ -139,9 +142,15 @@ def loss_of(batch, ls=0.0):
     """returns (summed weighted CE, summed weight)"""
     with torch.autocast("cuda", dtype=torch.bfloat16):
         if a.arch == "A":
-            x, w = batch
-            x, w = x.to(dev), w.to(dev)
-            logits = model(input_ids=x).logits[:, :-1].float(); tgt = x[:, 1:]; wt = w[:, 1:]
+            x, w = batch[0].to(dev), batch[1].to(dev)
+            if a.chord_aux > 0:
+                out = model(input_ids=x, output_hidden_states=True)
+                logits = out.logits[:, :-1].float(); tgt = x[:, 1:]; wt = w[:, 1:]
+                h = out.hidden_states[-1][:, :-1].float(); ax = batch[2].to(dev)[:, :-1]
+                ce_aux = F.cross_entropy(model.chord_head(h).reshape(-1, 25), ax.reshape(-1), ignore_index=-100, reduction="sum")
+                n_aux = (ax != -100).sum().clamp(min=1)
+            else:
+                logits = model(input_ids=x).logits[:, :-1].float(); tgt = x[:, 1:]; wt = w[:, 1:]
         else:
             enc, dec = batch
             enc, dec = enc.to(dev), dec.to(dev)
@@ -153,12 +162,16 @@ def loss_of(batch, ls=0.0):
         ann = torch.isin(tgt, torch.tensor(v.chord_ids, device=tgt.device))
         loss_of.acc_hit = getattr(loss_of, "acc_hit", 0) + ((logits.argmax(-1) == tgt) & ann).sum().item()
         loss_of.acc_n = getattr(loss_of, "acc_n", 0) + ann.sum().item()
-    return (ce * wt).sum(), wt.sum()
+    main = (ce * wt).sum()
+    if a.arch == "A" and a.chord_aux > 0:  # auxiliary term scaled to the same per-token normalization as the main loss
+        main = main + a.chord_aux * (ce_aux / n_aux) * wt.sum()
+    return main, wt.sum()
 
 
 def collate(ex):
     if a.arch == "A":
-        return pad([e[0] for e in ex], v.PAD), pad([e[1] for e in ex], 0.0)
+        base = (pad([e[0] for e in ex], v.PAD), pad([e[1] for e in ex], 0.0))
+        return base + (pad([e[2] for e in ex], -100),) if a.chord_aux > 0 else base
     return pad([e[0] for e in ex], v.PAD), pad([e[1] for e in ex], v.PAD)
 
 
