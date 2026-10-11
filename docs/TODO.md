@@ -56,3 +56,13 @@ Prepared (CPU-side, 2026-10-07): `src/bonus_data.py` (run OK), `src/bonus_lib.py
 - [x] SI on final F1 sets (pure closest to real)
 - [x] chord-conditioned logit bias (given CA 0.75-0.92); [x] pitch-only repetition penalty run (H1/H4 move away from real; not used)
 - [ ] Task a final 20 .mid/.wav (pure default), Task b regenerate from F1, bonus 10 .mid/.wav
+
+## From the external review (2026-10-12)
+- [ ] Training-seed replicates (seeds 1, 2) of F1, FA12, F2 + sweeps (running)
+- [ ] Chord auxiliary loss, bonus A
+- [ ] Conditioning dropout + classifier-free guidance, bonus
+- [ ] Velocity/micro-timing augmentation, Task a
+- [ ] Learned non-metric reranker (trained on training-set pairs)
+- [ ] Key-aware pitch bias
+- [ ] Decide Task a default again with density in view (pure 29.6 vs bias3 23.4 vs real 20.6 notes/bar)
+- [ ] Report: state no published number verified under TA metrics; single-rater listening disclosed
