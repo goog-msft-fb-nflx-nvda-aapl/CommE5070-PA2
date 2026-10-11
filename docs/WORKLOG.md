@@ -538,3 +538,23 @@ F7 = Task a llama-style decoder (RoPE), p16, 20000 steps, dropout 0.3, full data
 | T1.2 top_k5 | 2.154 | 2.613 | 0.965 | 23.7 |
 | T1.0 + bar_bias3 | 2.082 | 2.600 | 0.967 | 19.4 |
 F1 (GPT-2 learned absolute positions) pure: 2.169 / 2.600 / 0.963. Differences are small (H1 0.03, H4 0.04, GS 0.004) and not resolved with one training seed; architecture family also differs (RMSNorm, SwiGLU, attention dropout only).
+
+## 2026-10-11 chord-triad logit bias, FB9/FB10, SI on final Task a sets
+Chord-triad logit bias (gen_bonus --chord_bias B: +B on the logit of every Pitch_x whose pitch class is in the triad of the current bar's conditioning chord; applied when the previous token is a Pos_x). F2 last.pt (B, chord mode 2), T0.9 top_p0.9, seeds 0-2 x 10 prompts, p4; rows results/final/results_F2_chordbias.jsonl, results_F2F3_chordbias.jsonl (CA-ceiling 0.7625):
+| bias | given chords CA | notes/bar | DP/DV/DD/DIOI | two-stage CA |
+|---|---|---|---|---|
+| 0 (F2 reference) | 0.656 | | | 0.183-0.231 (4 samplings) |
+| 1 | 0.748 | 15.3 | 0.884/0.594/0.649/0.469 | 0.233 |
+| 2 | 0.871 | 16.4 | 0.892/0.624/0.649/0.514 | 0.250 |
+| 4 | 0.921 | 16.5 | 0.895/0.604/0.651/0.516 | 0.248 |
+Measured: given-chord CA rises with the bias (0.75-0.92), OA stays within about 0.03-0.06 of the unbiased runs. Two-stage CA is bounded by the stage-1 predictions (0.23-0.25).
+FB9 = arch B chord-in-decoder with T5 relative buckets 128 / max distance 1024 (40000 steps, full data, last.pt; results_FB9_*.jsonl); FB10 = same with d256, 4+4 layers, 4 heads, d_ff 1024 (results_FB10_*.jsonl). CA by sampling (T1.0 pure / T1.0 p0.95 / T0.9 p0.9 / T1.2 k5): FB9 0.573 / 0.610 / 0.610 / 0.498; FB10 0.567 / 0.660 / 0.631 / 0.529; reference F2 (32 buckets, 6+6, d512) 0.587-0.656 for its four configs. No resolved difference with one training seed each.
+SI of the final Task a sets (seed 0, 20 pieces each, p16 F1 / F7, same SI code as before; results/si_final/*.json; real data 100 crops short/mid/long = 0.369/0.376/0.344):
+| set | SI short | mid | long |
+|---|---|---|---|
+| F1 pure | 0.330 | 0.290 | 0.225 |
+| F1 bar_bias 3 | 0.319 | 0.271 | 0.210 |
+| F1 T0.9 top_p0.9 | 0.657 | 0.692 | 0.635 |
+| F1 T1.0 top_p0.95 | 0.528 | 0.517 | 0.449 |
+| F7 (RoPE) pure | 0.287 | 0.257 | 0.212 |
+Measured: pure is closest to real among the F1 configs on all three SI scales; truncated sampling (p0.9, p0.95) gives far higher SI than real. This supports the pure default for Task a.

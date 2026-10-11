@@ -13,6 +13,7 @@ from transformers import (GPT2Config, GPT2LMHeadModel, T5Config, T5ForConditiona
                           StoppingCriteriaList, LogitsProcessorList)
 import bonus_lib as bl
 from generate import NoSpecial, TypedSampler, BarStop
+from transformers import LogitsProcessor
 
 
 class LastIn(StoppingCriteria):
@@ -71,6 +72,27 @@ def parse_piano(bar_tokens, note_fn, P):
     return notes, bad
 
 
+class ChordBias(LogitsProcessor):
+    """inference-time harmony guidance: adds `bias` to the logit of every Pitch_x whose pitch class is in the triad of the current bar's
+    conditioning chord (given or stage-1 predicted), applied when the next token is a pitch (previous token is a Pos_x). Set .cur per bar."""
+    def __init__(self, v, bias):
+        self.bias, self.cur = bias, -1
+        self.pos = torch.tensor([i for t, i in v.t2i.items() if t.startswith("Pos_")])
+        self.pitch = {int(t.split("_")[1]): i for t, i in v.t2i.items() if t.startswith("Pitch_")}
+        self.v = v
+    def __call__(self, input_ids, scores):
+        if self.cur < 0:
+            return scores
+        root, minor = self.cur % 12, self.cur >= 12
+        pcs = {root, (root + (3 if minor else 4)) % 12, (root + 7) % 12}
+        m = torch.isin(input_ids[:, -1].cpu(), self.pos).to(scores.device)
+        add = torch.zeros(scores.shape[-1], device=scores.device)
+        for p, i in self.pitch.items():
+            if p % 12 in pcs:
+                add[i] = self.bias
+        return scores + m[:, None].float() * add[None, :]
+
+
 def rerank_score(per_bar, bars, note_fn, P):
     """fraction of bars (with a conditioning chord label) whose generated chord, estimated by eval_bonus.estimate_chord, equals it"""
     import importlib.util
@@ -107,14 +129,18 @@ def prefix_for(bars, gen, j, i, L, chord, v):
 
 
 @torch.no_grad()
-def gen_A(model, v, bars, L, chord, ctx, gen_kw, dev, max_bar_tokens=500, typed=None):
+def gen_A(model, v, bars, L, chord, ctx, gen_kw, dev, max_bar_tokens=500, typed=None, cbias=None):
     gen = [[] for _ in bars]; trunc = 0; slid = 0; pred = [None] * len(bars)
     chord_set = set(v.chord_ids + [v.chord_N])
     lp = LogitsProcessorList([NoSpecial([v.PAD, v.BOS])])
     if typed is not None:
         lp.append(typed)
     stop = StoppingCriteriaList([LastIn([v.M, v.P, v.EOS])])
+    if cbias is not None:
+        lp.append(cbias)
     for i in range(len(bars)):
+        if cbias is not None:
+            cbias.cur = bars[i]["c"]
         j = 0
         while True:  # sliding window: re-base the crop at bar j until the context fits
             ids = prefix_for(bars, gen, j, i, L, chord, v)
@@ -139,13 +165,15 @@ def gen_A(model, v, bars, L, chord, ctx, gen_kw, dev, max_bar_tokens=500, typed=
 
 
 @torch.no_grad()
-def gen_B(model, v, bars, chord, ctx, gen_kw, dev, typed=None):
+def gen_B(model, v, bars, chord, ctx, gen_kw, dev, typed=None, cbias=None):
     enc, _ = bl.build_B([dict(b, p=np.zeros(0, dtype=np.int64)) for b in bars], v, chord)
     x = torch.tensor([enc], device=dev)
     att = torch.ones_like(x)
     lp = LogitsProcessorList([NoSpecial([v.PAD, v.BOS])])
     if typed is not None:
         lp.append(typed)
+    if cbias is not None:
+        lp.append(cbias)
     if chord in (2, 3):
         # chord token forced in the decoder after every Bar: generate bar by bar
         dec = [v.BOS, v.BAR, v.chord_tok(bars[0]["c"])]
@@ -153,6 +181,8 @@ def gen_B(model, v, bars, chord, ctx, gen_kw, dev, typed=None):
         stop = StoppingCriteriaList([LastIn([v.BAR, v.EOS])])
         trunc = 0
         for i in range(len(bars)):
+            if cbias is not None:
+                cbias.cur = bars[i]["c"]
             room = ctx - len(dec) - 1
             if room <= 0:  # decoder context exhausted: the remaining bars stay empty (counted)
                 trunc += len(bars) - i
@@ -218,6 +248,7 @@ if __name__ == "__main__":
     ap.add_argument("--chord_from", default=None, help="stage-1 chord predictor ckpt (arch C): chords for the stage-2 model come from the melody only")
     ap.add_argument("--chord_from_sample", type=int, default=0, help="1: sample stage-1 chords (T=1) instead of greedy")
     ap.add_argument("--best_of", type=int, default=1, help="N candidates per prompt, keep the one whose chords (24-triad estimator of eval_bonus) agree most with the conditioning chords of the bars (given or stage-1 predicted); needs chord_input != 0")
+    ap.add_argument("--chord_bias", type=float, default=0.0, help="add this to the logit of pitches in the current bar's conditioning triad (needs chord_input 2 or A)")
     ap.add_argument("--chord_shuffle", type=int, default=0, help="control: permute the chord labels across the bars of each prompt")
     a = ap.parse_args()
 
@@ -236,6 +267,7 @@ if __name__ == "__main__":
         temps = [a.temperature if x is None else x for x in tt]
         typed = TypedSampler({**v.t2i}, *temps, a.bar_bias, a.top_k, a.top_p, dev)
         gen_kw = dict(temperature=1.0, top_k=None, top_p=None)  # TypedSampler does all the sampling transforms
+    cbias = ChordBias(v, a.chord_bias) if a.chord_bias else None
     stage1 = load(a.chord_from, dev, a.tok2idx)[0] if a.chord_from else None
     os.makedirs(a.out_dir, exist_ok=True)
     records, tot_bad, tot_trunc, chord_hits, s1_hits, sel_scores = [], 0, 0, [], [], []
@@ -260,8 +292,8 @@ if __name__ == "__main__":
         note_fn = grid_time(pr["beat_times"], pr["beat_info"], a.pos_per_beat)
         best = None
         for _cand in range(max(1, a.best_of)):
-            pb_, tr_, pd_ = (gen_A(model, v, bars, L, chord, ctx, gen_kw, dev, typed=typed) if arch == "A"
-                             else gen_B(model, v, bars, chord, ctx, gen_kw, dev, typed))
+            pb_, tr_, pd_ = (gen_A(model, v, bars, L, chord, ctx, gen_kw, dev, typed=typed, cbias=cbias) if arch == "A"
+                             else gen_B(model, v, bars, chord, ctx, gen_kw, dev, typed, cbias))
             if a.best_of <= 1:
                 best = (0, pb_, tr_, pd_); break
             sc = rerank_score(pb_, bars, note_fn, a.pos_per_beat)
@@ -297,7 +329,7 @@ if __name__ == "__main__":
         row = {"ckpt": a.ckpt, "ckpt_sha": sha(a.ckpt), "arch": arch, "chord_input": chord, "lookahead": L if arch == "A" else None,
                "temperature": a.temperature, "top_k": a.top_k, "top_p": a.top_p, "bar_bias": a.bar_bias, "t_struct": a.t_struct, "t_pitch": a.t_pitch, "t_vel": a.t_vel, "t_dur": a.t_dur, "seed": a.seed, "tag": a.tag, "chord_shuffle": a.chord_shuffle,
                "pred_chord_acc": (float(np.mean(chord_hits)) if chord_hits else (float(np.mean(s1_hits)) if s1_hits else None)),
-               "chord_from": a.chord_from, "best_of": a.best_of, "selected_conditioning_chord_agreement": (float(np.mean(sel_scores)) if sel_scores else None),
+               "chord_from": a.chord_from, "best_of": a.best_of, "chord_bias": a.chord_bias, "selected_conditioning_chord_agreement": (float(np.mean(sel_scores)) if sel_scores else None),
                "metrics": m, "malformed": tot_bad, "truncated_bars": tot_trunc, "notes_per_bar": float(np.mean([r["n_notes"] for r in records]) / 16),
                "code_sha256": {f: sha(os.path.join(here, f)) for f in ["gen_bonus.py", "bonus_lib.py", "generate.py"]},
                "train_args": targs}
