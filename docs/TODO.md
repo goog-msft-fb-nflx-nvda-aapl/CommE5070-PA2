@@ -74,3 +74,4 @@ Prepared (CPU-side, 2026-10-07): `src/bonus_data.py` (run OK), `src/bonus_lib.py
 - [ ] Key-aware pitch bias
 - [ ] Decide Task a default again with density in view (pure 29.6 vs bias3 23.4 vs real 20.6 notes/bar)
 - [ ] Report: state no published number verified under TA metrics; single-rater listening disclosed
+- [ ] LAST (optional, only if time remains after all deliverables are final): MidiTok REMI as an alternative tokenizer for Task a. Must first rewrite the .mid time signature from beat_midi.txt (course announcement), then tokenize, train with the F1 recipe, and compare H1/H4/GS against F1 (training-seed spread H4 ≈ 0.05). eval_basic.py expects the TA token format, so a conversion or custom scoring path is needed; not expected to change results (our MIDI-like / Compound Word runs did not beat TA-REMI).

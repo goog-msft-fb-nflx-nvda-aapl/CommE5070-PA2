@@ -635,3 +635,6 @@ TA (Bo-Rui Chen): per-bar chord labels (chord_midi.txt) may be used as model con
 
 ## 2026-10-12 course announcement: POP909 time signatures
 Announcement: the time signatures in the POP909 .mid files are mostly wrong, so MidiTok users must take the time signature from beat_midi.txt and write it back into the .mid before tokenizing. Not affected: we do not use MidiTok; all tokenization goes through the TA's tokenization.py (bar/beat structure read from each song's beat_midi.txt, line ~110) via our wrapper tokenize_hw2.py, and the bonus pipeline (bonus_data.py, gen_bonus.py) uses beat_midi.txt/chord_midi.txt for bars and grids; no .mid time-signature field is read anywhere in src/ or scripts/ (grep for time_signature/miditok: no hits). The MIDI-like and Compound Word ablations (alt_repr.py) are our own code on the same beat-derived bar grid. A one-line statement is added to the report (slide 3).
+
+## 2026-10-12 MidiTok decision
+User decision: MidiTok goes at the very end of TODO (optional, after all deliverables are final). Rationale logged in TODO: same REMI family as the TA tokenizer, no measured evidence of gain, risk of breaking the unmodified eval scripts.
