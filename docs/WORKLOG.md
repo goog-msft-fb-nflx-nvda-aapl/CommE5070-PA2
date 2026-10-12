@@ -576,3 +576,11 @@ Queue from the review (run one by one): (1) training-seed replicates (seeds 1, 2
 
 ## 2026-10-12 chord auxiliary loss (bonus A) implemented, queued
 `train_bonus.py --chord_aux W`: a linear head (25 classes: 24 triads + no label) on the final hidden state of every token of the piano segment (the <P> tag and the piano tokens of bar i) is trained to predict bar i's chord; loss = main + W x mean aux CE x (number of main-loss tokens); the head is dropped at inference (gen_bonus ignores `chord_head.*`). The model never receives chord input. Jobs: FA13 (W 0.3) and FA14 (W 1.0): A, lookahead 1, no chord input, full data, 10000 steps, dropout 0.3, seed 0, last.pt; control = FA1 (identical without aux; CA 0.146-0.179). Queued behind the seed replicates on GPU 1 (tmux `aux`, `src/aux_runs.sh`).
+
+## 2026-10-12 training-seed replicates + chord auxiliary loss (results in results/final/)
+Configs: same as the seed-0 runs (F1: p16 gpt2 8L×512 20000 steps dropout 0.3; FA12: arch A L1 chord-both + chord_emb 10000 steps; F2: arch B 6+6 chord 2, 40000 steps), training seeds 1 and 2; sampling-seed 0-2 means, full config in each jsonl row.
+- F1 pure (H1/H4/GS), train-seed 0: 2.169/2.600/0.963; seed 1: 2.200/2.646/0.964; seed 2: 2.174/2.631/0.966. Bias 3: seed 1 2.109/2.606/0.964, seed 2 2.040/2.571/0.968.
+- FA12 given-chord CA (pure / p0.95 / T0.9p0.9 / T1.2k5): seed 1 0.669/0.688/0.754/0.640; seed 2 0.575/0.606/0.627/0.633 (seed 0 earlier: 0.629–0.660 range). Training-seed spread is ~0.1 CA, comparable to differences between some variants.
+- F2 (arch B, given chords): seed 1 0.604/0.660/0.725/0.690; seed 2 0.625/0.623/0.696/0.602.
+- Chord aux loss, melody-only A L1 (CA pure/p0.95/T0.9/T1.2k5): FA13 (w0.3) 0.165/0.173/0.142/0.138; FA14 (w1.0) 0.150/0.162/0.135/0.158. Control FA1 0.146–0.179. No measurable gain; aux loss does not help melody-only CA.
+Next: conditioning dropout + CFG, velocity/micro-timing augmentation, learned reranker, key-aware bias.
