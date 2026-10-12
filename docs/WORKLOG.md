@@ -625,7 +625,7 @@ work/deliver/: taskA (20 .mid + 20 .wav, cfg1_T1.0_pure, F1), taskB (3 prompts Ã
 Note: the chord_given CA exceeds the "CA-ceiling" 0.7625 (ceiling = CA of the real piano accompaniment re-estimated by the same chord estimator): guided generation agrees with the labels more clearly than the real piano does, so CA > ceiling means stronger agreement with the chord labels, not better music; to be said in the report. csv in results/deliver/.
 
 ## 2026-10-12 report deck built (local, report/ is not in the repo whitelist)
-report/build_deck.py (python-pptx) -> report/r05921008_report.pptx -> LibreOffice PDF `report/r05921008_report.pdf`, 12 slides 16:9, figures from report/make_figures.py (new cfg_curve.png from results/final). All numbers copied from the logged tables (WORKLOG / REVIEW_PACKAGE). Open placeholders: cloud-drive link on slide 1, Task b best-per-prompt (listening) on slide 7; student ID presumed r05921008.
+report/build_deck.py (python-pptx) -> report/r05921008_report.pptx -> LibreOffice PDF `report/r05921008_report.pdf`, 13 slides 16:9, figures from report/make_figures.py (new cfg_curve.png from results/final). All numbers copied from the logged tables (WORKLOG / REVIEW_PACKAGE). Open placeholders: cloud-drive link on slide 1, Task b best-per-prompt (listening) on slide 7; student ID presumed r05921008.
 
 ## 2026-10-12 student ID confirmed, upload package assembled
 Student ID is R13921031 (r05921008 was only the git e-mail): report renamed R13921031_report.pdf/pptx. Upload package (local): /Users/chun-feitan/Desktop/CommE5070/PA2/upload_package (600 MB): code (README.md, requirements*.txt, infer.py, src/, scripts/, vocab/, patches/, results/, docs/), checkpoints/ (4 weights-only .pt, 414 MB), generated/ (taskA 20 mid+wav, taskB 9 mid+wav in 3 config folders, bonus_melody_only 10, bonus_chord_given 10), R13921031_report.pdf. No training/preprocessed data, no caches. Cloud link still to be created and inserted on slide 1.
@@ -668,3 +668,6 @@ Course announcement context: this is the MidiTok experiment from TODO. Running c
 
 ## 2026-10-13 optional experiments finished (rows/configs/logs in results/optional/, table in results/optional/README.md)
 F9 (12 layers, ~42M): pure 2.185/2.651/0.957 (F1 pure 2.169/2.600/0.963) -> no resolved change (H4 gap 0.05 = training-seed spread). F10 (BPE, 1500 merges): pure 2.159/2.609/0.958, truncated configs like F1. F11 (MidiTok REMI, time signature from beat_midi.txt): pure 2.201/2.613/0.978 against its own real reference 2.192/2.647/0.978 (different quantization, not comparable with the TA-token rows). Conclusion: none of the three optional variants changes the Task a numbers beyond the measured seed noise. F11 .mid decode with MidiTok failed (KeyError (0,3)); token-level metrics unaffected. Single training seed per variant.
+
+## 2026-10-13 report: slide 12 (optional Task a variants) added, slide 3 MidiTok statement corrected
+Report now 13 slides (references moved to slide 13). PDF re-copied to upload_package/; Drive and NTU COOL copies need the new PDF again (optional: the content change is only the added slide 12 and one sentence on slide 3).

@@ -116,7 +116,7 @@ bullets(s, ["POP909: 909 pop piano performances (MELODY / BRIDGE / PIANO + beat/
             "Finding: the TA tokenizer ignores pos_per_beat for onsets, so a 4-per-beat grid silently dropped 12% of events as out-of-vocabulary; our wrapper tokenize_hw2.py quantizes onsets to the grid first (TA script used unmodified)",
             "The Grooving-Similarity reference depends on the grid: real 32-bar crops give GS 0.887 at p4 but 0.962 at p16, so each model is compared with the reference of its own grid",
             "Real-data references (eval_basic, 32-bar crops): H1 2.118, H4 2.617; real density 20.6 notes/bar",
-            "Bars/beats come from each song's beat_midi.txt (TA tokenizer); the .mid time-signature fields, which are mostly wrong in POP909, are never read, and MidiTok is not used",
+            "Bars/beats come from each song's beat_midi.txt (TA tokenizer); the .mid time-signature fields, which are mostly wrong in POP909, are never read; the submitted models do not use MidiTok (an optional MidiTok run is on slide 12)",
             "Augmentation: transposition −5…+6 semitones; random crops of 32 bars (Task a) or 16–24 bars (bonus)"],
         0.55, 1.6, 12.2, 5.3, size=16, gap=8)
 
@@ -246,7 +246,24 @@ bullets(s, ["Noise is measured, not assumed: 3 training-seed replicates of F1, F
             "Chord-given vs melody-only: the TA confirmed chord labels may be used as input; the assumption that labels raise CA holds here (0.84 with labels vs 0.23 without, same sampling, seed 0)"],
         0.55, 1.5, 12.2, 5.5, size=15, gap=9)
 
-# ---- 12 references / repro
+# ---- 12 optional variants
+s = slide("Optional Task a variants (not used in the submission)", "Same recipe as F1 unless stated; 3 sampling seeds × 20 pieces, unmodified eval_basic.py; one training seed each")
+table(s, [["model", "sampling", "H1", "H4", "GS"],
+          ["F1 reference: TA REMI p16, 8L ~27M (real 2.118 / 2.617 / 0.962)", "T1.0 pure", "2.169", "2.600", "0.963"],
+          ["F9: 12 layers (~42M)", "T1.0 pure", "2.185", "2.651", "0.957"],
+          ["F9: 12 layers", "T0.9 top-p 0.9", "2.090", "2.464", "0.994"],
+          ["F10: BPE, 1500 merges (sequences 1.69× shorter, vocab 2045)", "T1.0 pure", "2.159", "2.609", "0.958"],
+          ["F10: BPE", "T0.9 top-p 0.9", "1.930", "2.326", "0.993"],
+          ["F11: MidiTok REMI, time signature fixed from beat_midi.txt (own real reference 2.192 / 2.647 / 0.978)", "T1.0 pure", "2.201", "2.613", "0.978"],
+          ["F11: MidiTok REMI", "T0.9 top-p 0.9", "2.136", "2.383", "0.998"]],
+      0.55, 1.6, 12.2, col_w=[6.2, 2.0, 1.1, 1.1, 1.1], size=12, row_h=0.46)
+bullets(s, ["None of the pure-sampling differences to F1 exceeds the training-seed spread (H4 ≈ 0.05): a larger model, BPE merging or the MidiTok REMI tokenizer did not change the Task a numbers beyond noise",
+            "F10: each step sees 1.69× more music tokens than an F1 step (same steps, batch and context); merges never cross Bar or Tempo tokens; transposition is applied to the data before merging",
+            "F11 is scored in its own tokenization (quantization differs), so it is compared with its own real-data reference, not with the TA-token rows; its MIDI decoding failed, so there is no F11 audio",
+            "Rows, configs and logs: results/optional/ in the repository"],
+        0.55, 5.35, 12.2, 1.6, size=11, gap=2)
+
+# ---- 13 references / repro
 s = slide("Reproducibility, code reuse and references")
 bullets(s, ["Run: python infer.py uncond|continue|bonus --out_dir OUT (README); seeds fixed; a clean-environment test reproduced the objective metrics of the experiment runs to 4 decimals",
             "Every result row (results/*.jsonl) stores config, checkpoint hash, code hashes, seed",
