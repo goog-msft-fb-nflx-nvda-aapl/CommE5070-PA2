@@ -25,8 +25,8 @@ Put the released checkpoints in `checkpoints/` (`uncond_final.pt`, `bonus_final.
 ```bash
 python infer.py uncond   --out_dir OUT [--n 20] [--seed 0] [--config cfg1_T1.0_pure]   # Basic task a: 20 pieces x 32 bars
 python infer.py continue --prompt_dir POP909/prompts/basic-b --out_dir OUT [--seed 0]      # Basic task b: 3 prompts x 3 configs (8 + 24 bars)
-python infer.py bonus    --prompt_dir POP909/prompts/bonus   --out_dir OUT --mode melody_only   # Bonus: MELODY -> PIANO, melody only
-python infer.py bonus    --prompt_dir POP909/prompts/bonus   --out_dir OUT --mode chord_given   # same model, chord labels of the prompt folder as input
+python infer.py bonus    --prompt_dir POP909/prompts/bonus   --out_dir OUT --mode chord_given   # Bonus (default): MELODY -> PIANO, chord labels of the prompt folder as input (allowed by the TA)
+python infer.py bonus    --prompt_dir POP909/prompts/bonus   --out_dir OUT --mode melody_only   # melody only (no chord file), for comparison
 ```
 Every call writes `.mid` and `.wav` files under `OUT` (and the token files / config json of the run). `--seed` fixes the sampling;
 with the same seed, package versions and GPU architecture the pieces are reproduced exactly (checked: the objective metrics of the files written by

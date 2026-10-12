@@ -39,7 +39,7 @@ Deadline: 2026-10-26 23:59. Work one item at a time, log results/decisions in `W
 - [ ] Convert all to `.mid` + `.wav`, listen, mark best config per prompt
 
 ## 3. Bonus — Accompaniment generation (MANDATORY; in progress since 2026-10-07)
-- [ ] ASK TA (rakechen168@gmail.com): may `chord_midi.txt` chord labels be used as model input for the bonus task? (draft in WORKLOG 2026-10-07; decides main setting: melody-only CA ~0.15 vs chord-conditioned CA ~0.6)
+- [x] TA answered 2026-10-12: chord labels may be used as input; CA expected higher with them; compare the two models; submitted files may be chosen by listening. (draft in EMAIL_TA_DRAFT.md)
 Prepared (CPU-side, 2026-10-07): `src/bonus_data.py` (run OK), `src/bonus_lib.py`, `src/train_bonus.py` (not yet run on GPU), `RESEARCH_PROMPT_R2.md` (to hand to deep research).
 - [ ] Hand `RESEARCH_PROMPT_R2.md` to deep research, review the response
 - [ ] Smoke-test `train_bonus.py` for arch A and arch B (100 steps each), check shapes/loss masks with a positive control

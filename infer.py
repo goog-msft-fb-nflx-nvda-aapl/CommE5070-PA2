@@ -82,7 +82,7 @@ if __name__ == "__main__":
     c = sub.add_parser("continue"); c.add_argument("--prompt_dir", required=True); c.add_argument("--out_dir", required=True)
     c.add_argument("--seed", type=int, default=0)
     b = sub.add_parser("bonus"); b.add_argument("--prompt_dir", required=True); b.add_argument("--out_dir", required=True)
-    b.add_argument("--seed", type=int, default=0); b.add_argument("--mode", default="melody_only", choices=["melody_only", "chord_given"])
+    b.add_argument("--seed", type=int, default=0); b.add_argument("--mode", default="chord_given", choices=["melody_only", "chord_given"])
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
     {"uncond": uncond, "continue": cont, "bonus": bonus}[a.task](a)
