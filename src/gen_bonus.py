@@ -109,6 +109,37 @@ class CFG(LogitsProcessor):
         return lu + self.w * (lc - lu)
 
 
+KS_MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88]
+KS_MIN = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17]
+
+
+def melody_key_pcs(bars, v):
+    """pitch classes of the diatonic scale of the key estimated (Krumhansl-Schmuckler) from the 16-bar MELODY prompt only (no chord labels, no metric)"""
+    h = np.zeros(12)
+    for b in bars:
+        for t in b["m"].tolist():
+            s = v.i2t[t]
+            if s.startswith("Pitch_"):
+                h[int(s.split("_")[1]) % 12] += 1
+    best = max(((np.corrcoef(h, np.roll(p, k))[0, 1], k, mi) for mi, p in enumerate([KS_MAJ, KS_MIN]) for k in range(12)))
+    _, k, mi = best
+    steps = [0, 2, 4, 5, 7, 9, 11] if mi == 0 else [0, 2, 3, 5, 7, 8, 10]
+    return {(k + s) % 12 for s in steps}
+
+
+class KeyBias(ChordBias):
+    """melody-only harmony guidance: +bias on pitches in the estimated key's diatonic scale whenever the next token is a pitch"""
+    def __init__(self, v, bias, pcs):
+        super().__init__(v, bias); self.pcs = pcs
+    def __call__(self, input_ids, scores):
+        m = torch.isin(input_ids[:, -1].cpu(), self.pos).to(scores.device)
+        add = torch.zeros(scores.shape[-1], device=scores.device)
+        for p, i in self.pitch.items():
+            if p % 12 in self.pcs:
+                add[i] = self.bias
+        return scores + m[:, None].float() * add[None, :]
+
+
 def rerank_score(per_bar, bars, note_fn, P):
     """fraction of bars (with a conditioning chord label) whose generated chord, estimated by eval_bonus.estimate_chord, equals it"""
     import importlib.util
@@ -267,6 +298,7 @@ if __name__ == "__main__":
     ap.add_argument("--chord_from_sample", type=int, default=0, help="1: sample stage-1 chords (T=1) instead of greedy")
     ap.add_argument("--best_of", type=int, default=1, help="N candidates per prompt, keep the one whose chords (24-triad estimator of eval_bonus) agree most with the conditioning chords of the bars (given or stage-1 predicted); needs chord_input != 0")
     ap.add_argument("--cfg", type=float, default=1.0, help="A: classifier-free guidance scale on the chord condition (needs a --chord_drop checkpoint); 1 = off")
+    ap.add_argument("--key_bias", type=float, default=0.0, help="add this to the logit of pitches in the diatonic scale of the key estimated from the melody prompt (melody-only, no chord labels)")
     ap.add_argument("--chord_bias", type=float, default=0.0, help="add this to the logit of pitches in the current bar's conditioning triad (needs chord_input 2 or A)")
     ap.add_argument("--chord_shuffle", type=int, default=0, help="control: permute the chord labels across the bars of each prompt")
     a = ap.parse_args()
@@ -310,6 +342,8 @@ if __name__ == "__main__":
             for b, k in zip(bars, perm):
                 b["c"] = labs[k]
         note_fn = grid_time(pr["beat_times"], pr["beat_info"], a.pos_per_beat)
+        if a.key_bias:
+            cbias = KeyBias(v, a.key_bias, melody_key_pcs(bars, v))
         best = None
         for _cand in range(max(1, a.best_of)):
             pb_, tr_, pd_ = (gen_A(model, v, bars, L, chord, ctx, gen_kw, dev, typed=typed, cbias=cbias, cfg_p=cfg_p) if arch == "A"
@@ -349,7 +383,7 @@ if __name__ == "__main__":
         row = {"ckpt": a.ckpt, "ckpt_sha": sha(a.ckpt), "arch": arch, "chord_input": chord, "lookahead": L if arch == "A" else None,
                "temperature": a.temperature, "top_k": a.top_k, "top_p": a.top_p, "bar_bias": a.bar_bias, "t_struct": a.t_struct, "t_pitch": a.t_pitch, "t_vel": a.t_vel, "t_dur": a.t_dur, "seed": a.seed, "tag": a.tag, "chord_shuffle": a.chord_shuffle,
                "pred_chord_acc": (float(np.mean(chord_hits)) if chord_hits else (float(np.mean(s1_hits)) if s1_hits else None)),
-               "chord_from": a.chord_from, "best_of": a.best_of, "chord_bias": a.chord_bias, "cfg": a.cfg, "selected_conditioning_chord_agreement": (float(np.mean(sel_scores)) if sel_scores else None),
+               "chord_from": a.chord_from, "best_of": a.best_of, "chord_bias": a.chord_bias, "cfg": a.cfg, "key_bias": a.key_bias, "selected_conditioning_chord_agreement": (float(np.mean(sel_scores)) if sel_scores else None),
                "metrics": m, "malformed": tot_bad, "truncated_bars": tot_trunc, "notes_per_bar": float(np.mean([r["n_notes"] for r in records]) / 16),
                "code_sha256": {f: sha(os.path.join(here, f)) for f in ["gen_bonus.py", "bonus_lib.py", "generate.py"]},
                "train_args": targs}

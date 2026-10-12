@@ -600,3 +600,7 @@ FA15 given-chord CA / OA pitch / vel / dur / IOI (pure; p0.95; T0.9p0.9; T1.2k5 
 - cfg 3.0: CA 0.883/0.835/0.883/0.838; pure OA 0.890/0.526/0.693/0.489
 CFG uses only the given chords (no metric-based selection). CA rises monotonically with scale; OA pitch/vel/dur/IOI stay in the same range (vel/IOI drift down a little at 3.0, single prompt set, differences of ~0.03 are within seed noise as seen in training-seed replicates). Without guidance the dropout-trained model is 0.54-0.64, i.e. dropout itself is not the gain. Notes/bar 15-19 (real piano density not re-measured here).
 F8 vel_aug 2, Task a (H1/H4/GS, mean of 3 sampling seeds): pure 2.203/2.582/0.957; p0.95 2.212/2.509/0.991; T0.9p0.9 2.171/2.489/0.996; T1.2k5 2.248/2.556/0.955; bias3 2.123/2.573/0.960. Reference F1 pure 2.169/2.600/0.963 (train-seed spread H4 2.600–2.646). Within training-seed spread: no measurable effect.
+
+## 2026-10-12 queued: higher CFG scales, key-aware pitch bias
+- cfghi (GPU 1): FA15 sweep at cfg 4.0 and 6.0 (same 4 sampling configs × 3 seeds), src/cfg_hi.sh.
+- kb (GPU 2): melody-only key bias on FA1 (A L1, no chord input, 10000 steps): `--key_bias b` adds b to the logit of pitches in the diatonic scale of the key estimated (Krumhansl-Schmuckler) from the melody prompt only; b = 1, 2, 4, T0.9 top_p0.9, seeds 0-2, src/sweep_keybias.sh. Uses no chord labels, so it is not metric-guided. Control: FA1 same sampling without bias.
