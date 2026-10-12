@@ -94,7 +94,8 @@ bullets(s, [f"Student: {STUDENT} (CommE5070, HW2)",
         0.55, 1.6, 12.2, 3, size=18, gap=10)
 note(s, "Cloud drive (code + README.md + requirements.txt + checkpoints + generation results):", 0.55, 5.1, 12.2, 0.4, size=16, color=INK, bold=True)
 note(s, CLOUD_LINK, 0.55, 5.55, 12.2, 0.5, size=15, color=BLUE, bold=True, link=CLOUD_LINK)
-note(s, "Run inference: python infer.py {uncond|continue|bonus} --out_dir OUT  (see README, output path is settable; writes .mid and .wav)", 0.55, 6.3, 12.2, 0.5, size=13)
+note(s, "GitHub (private until after the deadline, then public): https://github.com/goog-msft-fb-nflx-nvda-aapl/CommE5070-PA2", 0.55, 6.0, 12.2, 0.4, size=12, color=INK2, link="https://github.com/goog-msft-fb-nflx-nvda-aapl/CommE5070-PA2")
+note(s, "Run inference: python infer.py {uncond|continue|bonus} --out_dir OUT  (see README, output path is settable; writes .mid and .wav)", 0.55, 6.5, 12.2, 0.5, size=13)
 
 # ---- 2 overview
 s = slide("What was built", "Three tasks, one tokenizer family, two model families")
