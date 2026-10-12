@@ -11,13 +11,15 @@
   "note": "stage-1 chord predictor (melody -> chords) feeds the chord-conditioned accompaniment model; no chord file is read"
  },
  "chord_given": {
-  "ckpt": "bonus_final.pt",
+  "ckpt": "bonus_chord_final.pt",
   "flags": [
    "--temperature",
    "0.9",
    "--top_p",
-   "0.9"
+   "0.9",
+   "--cfg",
+   "3.0"
   ],
-  "note": "uses the chord labels (chord_midi.txt) of the prompt folder as input"
+  "note": "FA15 (arch A, chord dropout 0.15) with classifier-free guidance scale 3.0; uses the chord labels (chord_midi.txt) of the prompt folder as input"
  }
 }

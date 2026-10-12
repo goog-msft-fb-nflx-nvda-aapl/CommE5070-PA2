@@ -613,3 +613,6 @@ Key bias (FA1, melody-only, T0.9 p0.9, estimated key from melody prompt only): b
 
 ## 2026-10-12 result: two-stage (F3 predicted chords) + FA15 + CFG, melody-only pipeline
 FA15 last.pt, chords from F3 (arch C, stage 1, greedy), T0.9 top_p0.9, seeds 0-2 × 10 prompts, scored against real chords: cfg 1.0 CA 0.183 (OA 0.853/0.574/0.678/0.536); cfg 3.0 CA 0.231 (0.842/0.541/0.696/0.496). Guidance gives +0.05 CA but stays at the melody-only level of the earlier two-stage pipeline (~0.23): the bottleneck is stage-1 chord accuracy, not the conditioning strength. Rows: results/final/results_FA15_*_twostage.jsonl.
+
+## 2026-10-12 final deliverable generation started (infer.py, seed 0)
+Bonus release config changed: `chord_given` now = FA15 (arch A, chord dropout 0.15, 10000 steps, dropout 0.3) + CFG scale 3.0, T0.9 top_p0.9 (measured CA 0.883, 3 sampling seeds; checkpoint bonus_chord_final.pt); `melody_only` unchanged = F2 + F3 stage-1 (vocab/bonus_final.json). Server checkpoints/ = symlinks to last.pt of F1 (uncond_final), F2 (bonus_final), F3 (bonus_stage1), FA15 (bonus_chord_final). tmux fg (GPU 1) runs src/final_gen.sh: infer.py uncond (cfg1 pure, 20 pieces), continue (3 prompts × 3 configs, F1 checkpoint), bonus melody_only, bonus chord_given -> work/deliver/. Logs work/deliver.*.log.

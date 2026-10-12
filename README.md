@@ -21,7 +21,7 @@ conda install -c conda-forge fluidsynth -y        # or: sudo apt-get install flu
 ```
 
 ## Inference
-Put the released checkpoints in `checkpoints/` (`uncond_final.pt`, `bonus_final.pt`, `bonus_stage1.pt`; distributed with the cloud-drive package), then:
+Put the released checkpoints in `checkpoints/` (`uncond_final.pt`, `bonus_final.pt`, `bonus_stage1.pt`, `bonus_chord_final.pt`; distributed with the cloud-drive package), then:
 ```bash
 python infer.py uncond   --out_dir OUT [--n 20] [--seed 0] [--config cfg1_T1.0_pure]   # Basic task a: 20 pieces x 32 bars
 python infer.py continue --prompt_dir POP909/prompts/basic-b --out_dir OUT [--seed 0]      # Basic task b: 3 prompts x 3 configs (8 + 24 bars)
