@@ -16,6 +16,7 @@ p.add_argument("--chord", type=int, default=0, help="1: per-bar chord token in t
 p.add_argument("--chord_emb", type=int, default=0, help="A: 1 = in-attention chord embedding (use with --chord 3)")
 p.add_argument("--rel_buckets", type=int, default=32, help="B: T5 relative_attention_num_buckets")
 p.add_argument("--rel_maxdist", type=int, default=256, help="B: T5 relative_attention_max_distance")
+p.add_argument("--chord_drop", type=float, default=0.0, help="A: probability that ALL chord labels of a training example are replaced by Chord_N (conditioning dropout, enables classifier-free guidance at inference)")
 p.add_argument("--chord_aux", type=float, default=0.0, help="A: weight of the auxiliary chord-classification loss on the piano-segment hidden states (head dropped at inference)")
 p.add_argument("--melody_w", type=float, default=0.0, help="A: loss weight on melody/condition tokens")
 p.add_argument("--ctx", type=int, default=2048, help="A: context; B: decoder max length")
@@ -55,6 +56,8 @@ w_song = np.array([len(s) for s in tr], dtype=np.float64); w_song /= w_song.sum(
 
 def make_example(bars):
     """bars (already transposed/cropped) -> tensors dict; drops trailing bars until it fits."""
+    if a.chord_drop > 0 and random.random() < a.chord_drop:
+        bars = [dict(b, c=-1) for b in bars]
     n = len(bars)
     while n > 1:
         if a.arch == "A":

@@ -584,3 +584,6 @@ Configs: same as the seed-0 runs (F1: p16 gpt2 8L×512 20000 steps dropout 0.3; 
 - F2 (arch B, given chords): seed 1 0.604/0.660/0.725/0.690; seed 2 0.625/0.623/0.696/0.602.
 - Chord aux loss, melody-only A L1 (CA pure/p0.95/T0.9/T1.2k5): FA13 (w0.3) 0.165/0.173/0.142/0.138; FA14 (w1.0) 0.150/0.162/0.135/0.158. Control FA1 0.146–0.179. No measurable gain; aux loss does not help melody-only CA.
 Next: conditioning dropout + CFG, velocity/micro-timing augmentation, learned reranker, key-aware bias.
+
+## 2026-10-12 conditioning dropout + CFG implemented, queued (FA15)
+train_bonus.py `--chord_drop p`: with prob p all chord labels of a training example become Chord_N. gen_bonus.py `--cfg w`: CFG LogitsProcessor (logp_u + w(logp_c - logp_u), u = same prefix with all chord tokens -> Chord_N, no cache). FA15 = FA12 recipe (A L1 chord 3 + chord_emb, 10000 steps, dropout 0.3) + chord_drop 0.15, sweep at cfg 1.0/1.5/2.0/3.0 (tmux cfg, GPU 1, src/cfg_runs.sh). Note: HF passes the processor scores possibly after temperature; guidance is applied to whatever scores arrive (interpretation caveat).
