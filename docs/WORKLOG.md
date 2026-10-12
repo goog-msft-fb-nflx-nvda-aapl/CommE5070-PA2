@@ -638,3 +638,17 @@ Announcement: the time signatures in the POP909 .mid files are mostly wrong, so 
 
 ## 2026-10-12 MidiTok decision
 User decision: MidiTok goes at the very end of TODO (optional, after all deliverables are final). Rationale logged in TODO: same REMI family as the TA tokenizer, no measured evidence of gain, risk of breaking the unmodified eval scripts.
+
+## 2026-10-12 Task b: objective proxies for the continuations (src/taskb_metrics.py, run on the server; the spec defines no Task b metric)
+Per file from the token json of the delivered set (seed 0, F1 checkpoint), bars 9-32 vs the 8-bar prompt: notes/bar, pitch-class histogram cosine to the prompt (pcCos), onset-position histogram cosine (rhythCos), out-of-key rate (pitch classes outside the prompt's 7 most used), repeated-bar rate (continuation bar identical in (Pos,Pitch) content to an earlier bar). Note: the prompt's 8th bar ends at Pos_32 and the model completes it, so "prompt/bar" is computed on bars 1-8 of the generated file (differs slightly between configs).
+| file | prompt/bar | cont/bar | pcCos | rhythCos | outKey | repBar |
+| 001 cfg1 | 16.5 | 28.7 | 0.924 | 0.925 | 0.029 | 0.000 |
+| 001 cfg2 | 15.5 | 14.6 | 0.950 | 0.957 | 0.000 | 0.000 |
+| 001 cfg3 | 16.1 | 20.9 | 0.902 | 0.856 | 0.042 | 0.417 |
+| 002 cfg1 | 23.0 | 31.8 | 0.925 | 0.446 | 0.076 | 0.000 |
+| 002 cfg2 | 22.1 | 23.6 | 0.971 | 0.941 | 0.014 | 0.000 |
+| 002 cfg3 | 22.1 | 24.6 | 0.988 | 0.909 | 0.002 | 0.000 |
+| 003 cfg1 | 23.2 | 36.0 | 0.949 | 0.769 | 0.005 | 0.000 |
+| 003 cfg2 | 22.8 | 31.0 | 0.877 | 0.802 | 0.008 | 0.000 |
+| 003 cfg3 | 23.2 | 31.8 | 0.943 | 0.790 | 0.000 | 0.458 |
+Reading (interpretation, proxies not quality): cfg2 stays closest to the prompt density and rhythm on 001/002; cfg3 loops (42-46% repeated bars on 001/003); cfg1 gets much denser than the prompt (28.7-36 vs 16.5-23) and on 002 drifts in rhythm (0.446). User's listening: cfg1 or cfg3 sounds better than cfg2 (per-prompt choice pending).
