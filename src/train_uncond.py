@@ -24,6 +24,7 @@ p.add_argument("--warmup", type=int, default=1000)
 p.add_argument("--wd", type=float, default=0.01)
 p.add_argument("--label_smoothing", type=float, default=0.0)
 p.add_argument("--transpose", type=int, default=5, help="shift range: -t..t+1 semitones, 0 disables")
+p.add_argument("--vel_aug", type=int, default=0, help="velocity augmentation: shift all Vel tokens of a crop by a random k in [-v,v] bins (4 MIDI-vel units each) plus +-1-bin jitter on 30%% of notes; 0 disables")
 p.add_argument("--val_frac", type=float, default=0.05)
 p.add_argument("--eval_every", type=int, default=500)
 p.add_argument("--save_every", type=int, default=2500)
@@ -94,6 +95,19 @@ def transpose(c, k_max):
     c = c.copy(); c[m] += k
     return c
 
+VEL_IDS = np.array(sorted(i for k, i in tok2idx.items() if k.startswith("Vel_")), dtype=np.int64)
+assert (np.diff(VEL_IDS) == 1).all()
+
+def vel_aug(c, v):
+    if v == 0:
+        return c
+    m = (c >= VEL_IDS[0]) & (c <= VEL_IDS[-1])
+    if not m.any():
+        return c
+    d = random.randint(-v, v) + (np.random.rand(int(m.sum())) < 0.3) * np.random.choice([-1, 1], int(m.sum()))
+    c = c.copy(); c[m] = np.clip(c[m] + d, VEL_IDS[0], VEL_IDS[-1])
+    return c
+
 def collate(crops):
     n = max(len(c) for c in crops)
     x = np.full((len(crops), n), PAD, dtype=np.int64)
@@ -108,7 +122,7 @@ def train_batch():
     for _ in range(a.batch):
         s = tr[np.random.choice(len(tr), p=bar_w)]
         j = random.randrange(len(s.bars))
-        crops.append(transpose(make_crop(s, j, a.ctx), a.transpose))
+        crops.append(vel_aug(transpose(make_crop(s, j, a.ctx), a.transpose), a.vel_aug))
     return collate(crops)
 
 def build_val():

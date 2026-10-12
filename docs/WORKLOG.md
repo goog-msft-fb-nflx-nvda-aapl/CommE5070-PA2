@@ -587,3 +587,6 @@ Next: conditioning dropout + CFG, velocity/micro-timing augmentation, learned re
 
 ## 2026-10-12 conditioning dropout + CFG implemented, queued (FA15)
 train_bonus.py `--chord_drop p`: with prob p all chord labels of a training example become Chord_N. gen_bonus.py `--cfg w`: CFG LogitsProcessor (logp_u + w(logp_c - logp_u), u = same prefix with all chord tokens -> Chord_N, no cache). FA15 = FA12 recipe (A L1 chord 3 + chord_emb, 10000 steps, dropout 0.3) + chord_drop 0.15, sweep at cfg 1.0/1.5/2.0/3.0 (tmux cfg, GPU 1, src/cfg_runs.sh). Note: HF passes the processor scores possibly after temperature; guidance is applied to whatever scores arrive (interpretation caveat).
+
+## 2026-10-12 velocity augmentation for Task a queued (F8)
+train_uncond.py `--vel_aug 2`: per crop shift all Vel tokens by random k in [-2,2] bins (4 MIDI-vel units/bin), plus ±1-bin jitter on 30% of notes. F8 = F1 protocol (p16, gpt2 8L×512, 20000 steps, dropout 0.3, full data, seed 0) + vel_aug 2; 3-seed sweep; tmux va, GPU 2, src/velaug_runs.sh. Compare against F1 seed 0-2 (H1/H4/GS 2.169/2.600/0.963 pure). Micro-timing augmentation not implemented (grid tokens; would break Pos alignment). FA15 (CFG) running on GPU 1.
