@@ -10,7 +10,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FIG = lambda n: os.path.join(HERE, "figs", n)
 STUDENT = "R13921031"
 CLOUD_LINK = "https://drive.google.com/drive/folders/19jENIBlJ3hmoRu9UIrka1VXZJrQdtPsP?usp=sharing"
-TASKB_BEST = {"001": None, "002": None, "003": None}   # e.g. "cfg2"; None = listening not done yet
+TASKB_BEST = {"001": "cfg1", "002": "cfg3", "003": "cfg3"}   # e.g. "cfg2"; None = listening not done yet
 
 INK, INK2, BLUE, ORANGE, BG, RULE = RGBColor(0x0b, 0x0b, 0x0b), RGBColor(0x52, 0x51, 0x4e), RGBColor(0x2a, 0x78, 0xd6), RGBColor(0xeb, 0x68, 0x34), RGBColor(0xfc, 0xfc, 0xfb), RGBColor(0xe6, 0xe5, 0xe1)
 RED = RGBColor(0xc0, 0x1f, 0x1f)
@@ -182,7 +182,8 @@ table(s, [["prompt", "cfg1: T1.0 pure", "cfg2: T1.0 + Bar bias 3", "cfg3: T0.9 t
       0.55, 1.6, 12.2, col_w=[1.0, 2.6, 2.8, 2.6, 2.2], size=13, row_h=0.45)
 pic(s, "density.png", 0.55, 3.55, w=5.4)
 bullets(s, ["The three configs differ in how much they deviate from the prompt: the Bar-logit bias keeps note density closest to the prompt's own (dev-checkpoint measurement, notes/bar prompt → cfg1 / cfg2 / cfg3: 001 15.5 → 17.5 / 16.0 / 23.8; 002 22.1 → 27.0 / 21.0 / 26.7; 003 22.8 → 32.1 / 24.7 / 45.0)",
-            "Truncated sampling (cfg3) is the densest and most repetitive continuation",
+            "The density numbers above are from the dev checkpoint; for the delivered F1 files see the proxy line below",
+            "Proxy metrics vs the prompt (not quality): cfg3 repeats 42% / 46% of its bars on 001 / 003 (0% for cfg1/cfg2); cfg1 is the densest (28.7 vs prompt 16.5 notes/bar on 001); cfg2 is closest to the prompt on 001/002 but was not picked by listening",
             "No objective metric is defined for this task; the 'best' column is the author's own listening choice (single rater, no listening test)",
             "Figure (dev model, not F1): density per quarter of a generated piece, real vs pure sampling vs Bar bias 3"],
         6.2, 3.5, 6.6, 3.4, size=13, gap=6)

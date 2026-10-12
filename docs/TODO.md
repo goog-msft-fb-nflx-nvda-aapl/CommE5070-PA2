@@ -1,4 +1,5 @@
 # TODO — CommE5070 HW2
+- [x] Task b picks: 001 cfg1, 002 cfg3, 003 cfg3; report rebuilt. Left: replace the PDF in the Drive, NTU COOL comment, final proofread.
 - [x] Student ID R13921031; upload package at PA2/upload_package (600 MB). Left: upload to Drive (open access), put link on report slide 1 (report/build_deck.py CLOUD_LINK) + Task b best (TASKB_BEST), NTU COOL comment.
 - [x] Cloud link inserted on slide 1 (https://drive.google.com/drive/folders/19jENIBlJ3hmoRu9UIrka1VXZJrQdtPsP); report rebuilt. Left: Task b best picks, upload final PDF, NTU COOL comment.
 - [ ] Report PDF drafted (report/r05921008_report.pdf, 12 slides). TODO: insert cloud-drive link (slide 1), Task b best-per-prompt (slide 7, after listening), confirm student ID, final proofread.

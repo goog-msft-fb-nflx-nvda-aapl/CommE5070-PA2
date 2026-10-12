@@ -652,3 +652,6 @@ Per file from the token json of the delivered set (seed 0, F1 checkpoint), bars 
 | 003 cfg2 | 22.8 | 31.0 | 0.877 | 0.802 | 0.008 | 0.000 |
 | 003 cfg3 | 23.2 | 31.8 | 0.943 | 0.790 | 0.000 | 0.458 |
 Reading (interpretation, proxies not quality): cfg2 stays closest to the prompt density and rhythm on 001/002; cfg3 loops (42-46% repeated bars on 001/003); cfg1 gets much denser than the prompt (28.7-36 vs 16.5-23) and on 002 drifts in rhythm (0.446). User's listening: cfg1 or cfg3 sounds better than cfg2 (per-prompt choice pending).
+
+## 2026-10-12 Task b picks (author listening, single rater)
+Best per prompt: 001 cfg1, 002 cfg3, 003 cfg3 (the author had listened only to the 003 versions at first, then to 001/002). Slide 7 updated incl. the proxy-metric note (cfg3 repeats 42%/46% of bars on 001/003; picks differ from the proxy-metric favourite cfg2). survey_taskb/ (blind A/B/C) + SURVEY_TASKB.md were prepared but not used. PDF in upload_package/ updated; Drive copy to be replaced.
