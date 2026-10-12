@@ -626,3 +626,6 @@ Note: the chord_given CA exceeds the "CA-ceiling" 0.7625 (ceiling = CA of the re
 
 ## 2026-10-12 report deck built (local, report/ is not in the repo whitelist)
 report/build_deck.py (python-pptx) -> report/r05921008_report.pptx -> LibreOffice PDF `report/r05921008_report.pdf`, 12 slides 16:9, figures from report/make_figures.py (new cfg_curve.png from results/final). All numbers copied from the logged tables (WORKLOG / REVIEW_PACKAGE). Open placeholders: cloud-drive link on slide 1, Task b best-per-prompt (listening) on slide 7; student ID presumed r05921008.
+
+## 2026-10-12 student ID confirmed, upload package assembled
+Student ID is R13921031 (r05921008 was only the git e-mail): report renamed R13921031_report.pdf/pptx. Upload package (local): /Users/chun-feitan/Desktop/CommE5070/PA2/upload_package (600 MB): code (README.md, requirements*.txt, infer.py, src/, scripts/, vocab/, patches/, results/, docs/), checkpoints/ (4 weights-only .pt, 414 MB), generated/ (taskA 20 mid+wav, taskB 9 mid+wav in 3 config folders, bonus_melody_only 10, bonus_chord_given 10), R13921031_report.pdf. No training/preprocessed data, no caches. Cloud link still to be created and inserted on slide 1.
