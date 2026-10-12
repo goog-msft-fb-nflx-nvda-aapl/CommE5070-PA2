@@ -20,3 +20,7 @@
 __pycache__/
 *.pyc
 .DS_Store
+!report/
+!report/**
+!EMAIL_TA_DRAFT.md
+!docs/reviews/**

@@ -1,5 +1,8 @@
 # CommE5070 HW2: symbolic music generation on POP909
 
+Cloud drive (code, README, requirements, checkpoints, generated .mid/.wav, report): https://drive.google.com/drive/folders/19jENIBlJ3hmoRu9UIrka1VXZJrQdtPsP?usp=sharing
+Report: `report/R13921031_report.pdf` (student ID R13921031). Checkpoints (414 MB) are only on the drive, not in git.
+
 Transformers trained from scratch on the POP909 training split only (no pretrained weights, no extra data).
 
 ## Layout
