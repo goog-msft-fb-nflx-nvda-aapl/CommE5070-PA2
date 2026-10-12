@@ -616,3 +616,10 @@ FA15 last.pt, chords from F3 (arch C, stage 1, greedy), T0.9 top_p0.9, seeds 0-2
 
 ## 2026-10-12 final deliverable generation started (infer.py, seed 0)
 Bonus release config changed: `chord_given` now = FA15 (arch A, chord dropout 0.15, 10000 steps, dropout 0.3) + CFG scale 3.0, T0.9 top_p0.9 (measured CA 0.883, 3 sampling seeds; checkpoint bonus_chord_final.pt); `melody_only` unchanged = F2 + F3 stage-1 (vocab/bonus_final.json). Server checkpoints/ = symlinks to last.pt of F1 (uncond_final), F2 (bonus_final), F3 (bonus_stage1), FA15 (bonus_chord_final). tmux fg (GPU 1) runs src/final_gen.sh: infer.py uncond (cfg1 pure, 20 pieces), continue (3 prompts × 3 configs, F1 checkpoint), bonus melody_only, bonus chord_given -> work/deliver/. Logs work/deliver.*.log.
+
+## 2026-10-12 deliverables generated via infer.py (seed 0) and scored with the TA scripts
+work/deliver/: taskA (20 .mid + 20 .wav, cfg1_T1.0_pure, F1), taskB (3 prompts × 3 configs = 9 .mid/.wav), bonus_mo (10, melody_only), bonus_cg (10, chord_given); 49 .mid / 49 .wav in total.
+- Task a (eval_basic, 20 pieces, seed 0): H1 2.2122, H4 2.6326, GS 0.9595 (sampling-seed range of F1 pure: H4 ~2.60–2.65).
+- Bonus melody_only (F2 + F3, T0.9 p0.9): CA 0.2313 (ceiling 0.7625), OA pitch/vel/dur/IOI 0.8370/0.5369/0.5974/0.4426.
+- Bonus chord_given (FA15, cfg 3.0, T0.9 p0.9): CA 0.8438, OA 0.8813/0.5206/0.6803/0.5136.
+Note: the chord_given CA exceeds the "CA-ceiling" 0.7625 (ceiling = CA of the real piano accompaniment re-estimated by the same chord estimator): guided generation agrees with the labels more clearly than the real piano does, so CA > ceiling means stronger agreement with the chord labels, not better music; to be said in the report. csv in results/deliver/.

@@ -1,4 +1,5 @@
 # TODO — CommE5070 HW2
+- [x] 2026-10-12 final .mid/.wav generated in work/deliver on server (taskA, taskB, bonus_mo, bonus_cg), scored. Next: pull to Mac for listening (user marks Task b best per prompt), report PDF, cloud package.
 - [x] 2026-10-12 two-stage + CFG: CA 0.231 (melody-only). Bonus headline still: chord-given CFG 0.88 vs melody-only 0.23; TA question on chord_midi.txt outstanding.
 - [x] 2026-10-12 CFG scales 4/6 (saturates ~0.89) and melody-only key bias (no effect) done. Remaining: learned non-metric reranker, melody-only CFG idea (needs predicted chords), decide bonus headline, deliverables.
 - [x] 2026-10-12 CFG (FA15) done: CA 0.88 at scale 3, OA unchanged; vel_aug (F8) no effect. Remaining: learned reranker, key-aware bias, optional higher cfg scale / CFG on arch B.
