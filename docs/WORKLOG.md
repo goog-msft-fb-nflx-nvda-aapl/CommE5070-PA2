@@ -623,3 +623,6 @@ work/deliver/: taskA (20 .mid + 20 .wav, cfg1_T1.0_pure, F1), taskB (3 prompts Ã
 - Bonus melody_only (F2 + F3, T0.9 p0.9): CA 0.2313 (ceiling 0.7625), OA pitch/vel/dur/IOI 0.8370/0.5369/0.5974/0.4426.
 - Bonus chord_given (FA15, cfg 3.0, T0.9 p0.9): CA 0.8438, OA 0.8813/0.5206/0.6803/0.5136.
 Note: the chord_given CA exceeds the "CA-ceiling" 0.7625 (ceiling = CA of the real piano accompaniment re-estimated by the same chord estimator): guided generation agrees with the labels more clearly than the real piano does, so CA > ceiling means stronger agreement with the chord labels, not better music; to be said in the report. csv in results/deliver/.
+
+## 2026-10-12 report deck built (local, report/ is not in the repo whitelist)
+report/build_deck.py (python-pptx) -> report/r05921008_report.pptx -> LibreOffice PDF `report/r05921008_report.pdf`, 12 slides 16:9, figures from report/make_figures.py (new cfg_curve.png from results/final). All numbers copied from the logged tables (WORKLOG / REVIEW_PACKAGE). Open placeholders: cloud-drive link on slide 1, Task b best-per-prompt (listening) on slide 7; student ID presumed r05921008.

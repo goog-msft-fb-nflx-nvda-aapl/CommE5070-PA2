@@ -1,4 +1,5 @@
 # TODO — CommE5070 HW2
+- [ ] Report PDF drafted (report/r05921008_report.pdf, 12 slides). TODO: insert cloud-drive link (slide 1), Task b best-per-prompt (slide 7, after listening), confirm student ID, final proofread.
 - [x] 2026-10-12 final .mid/.wav generated in work/deliver on server (taskA, taskB, bonus_mo, bonus_cg), scored. Next: pull to Mac for listening (user marks Task b best per prompt), report PDF, cloud package.
 - [x] 2026-10-12 two-stage + CFG: CA 0.231 (melody-only). Bonus headline still: chord-given CFG 0.88 vs melody-only 0.23; TA question on chord_midi.txt outstanding.
 - [x] 2026-10-12 CFG scales 4/6 (saturates ~0.89) and melody-only key bias (no effect) done. Remaining: learned non-metric reranker, melody-only CFG idea (needs predicted chords), decide bonus headline, deliverables.
