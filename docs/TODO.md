@@ -1,4 +1,5 @@
 # TODO — CommE5070 HW2
+- [x] 2026-10-13 optional experiments done: 12-layer (F9), BPE (F10), MidiTok (F11): no change beyond seed noise; results/optional/. Left: decide whether to add one slide to the report (optional), final proofread.
 - [ ] optional: F9 12-layer run in progress (tmux o12, GPU 1); then BPE merging, then MidiTok. Results go to results/optional/.
 - [x] Task b picks: 001 cfg1, 002 cfg3, 003 cfg3; report rebuilt. Left: replace the PDF in the Drive, NTU COOL comment, final proofread.
 - [x] Student ID R13921031; upload package at PA2/upload_package (600 MB). Left: upload to Drive (open access), put link on report slide 1 (report/build_deck.py CLOUD_LINK) + Task b best (TASKB_BEST), NTU COOL comment.

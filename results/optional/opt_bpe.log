@@ -1,0 +1,12 @@
+T1.0_pure s0: Average H1: 2.1826 Average H4: 2.6129 Average GS: 0.9617 
+T1.0_p0.95 s0: Average H1: 2.0288 Average H4: 2.3957 Average GS: 0.9829 
+T0.9_p0.9 s0: Average H1: 1.9502 Average H4: 2.2825 Average GS: 0.9944 
+T1.2_k5 s0: Average H1: 1.8642 Average H4: 2.2857 Average GS: 0.9829 
+T1.0_pure s1: Average H1: 2.1013 Average H4: 2.5643 Average GS: 0.9620 
+T1.0_p0.95 s1: Average H1: 2.0232 Average H4: 2.4136 Average GS: 0.9798 
+T0.9_p0.9 s1: Average H1: 1.8609 Average H4: 2.3197 Average GS: 0.9922 
+T1.2_k5 s1: Average H1: 1.9649 Average H4: 2.3765 Average GS: 0.9881 
+T1.0_pure s2: Average H1: 2.1922 Average H4: 2.6500 Average GS: 0.9494 
+T1.0_p0.95 s2: Average H1: 2.0969 Average H4: 2.4778 Average GS: 0.9878 
+T0.9_p0.9 s2: Average H1: 1.9786 Average H4: 2.3751 Average GS: 0.9910 
+T1.2_k5 s2: Average H1: 1.9544 Average H4: 2.3613 Average GS: 0.9902 

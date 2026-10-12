@@ -1,0 +1,1 @@
+{"miditok": "3.0.6", "cfg": {"pitch_range": [21, 109], "beat_res": "{(0,4):16,(4,12):8}", "num_velocities": 32, "tempos": true, "time_signature_tokens_in_stream": false}}

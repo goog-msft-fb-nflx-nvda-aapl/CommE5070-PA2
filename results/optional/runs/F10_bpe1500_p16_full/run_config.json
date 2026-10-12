@@ -1,0 +1,34 @@
+{
+ "args": {
+  "tok2idx": "work/bpe/tok2idx_bpe.json",
+  "sequences": "work/bpe/seqs_bpe.json",
+  "out_dir": "work/runs/F10_bpe1500_p16_full",
+  "arch": "gpt2",
+  "ctx": 4096,
+  "n_layer": 8,
+  "n_embd": 512,
+  "n_head": 8,
+  "dropout": 0.3,
+  "batch": 8,
+  "steps": 20000,
+  "lr": 0.0003,
+  "warmup": 1000,
+  "wd": 0.01,
+  "label_smoothing": 0.0,
+  "transpose": 0,
+  "vel_aug": 0,
+  "val_frac": 0.0,
+  "eval_every": 2500,
+  "save_every": 2500,
+  "seed": 0
+ },
+ "params": 28364288,
+ "val_songs": [],
+ "provenance": {
+  "train_uncond.py": "17675df5f27bf72e",
+  "tok2idx": "3b0b3e8a6f48c959",
+  "sequences": "6f109c4bf11bdd6b",
+  "torch": "2.6.0+cu124",
+  "transformers": "5.18.0"
+ }
+}
