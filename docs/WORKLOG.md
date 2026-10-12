@@ -604,3 +604,9 @@ F8 vel_aug 2, Task a (H1/H4/GS, mean of 3 sampling seeds): pure 2.203/2.582/0.95
 ## 2026-10-12 queued: higher CFG scales, key-aware pitch bias
 - cfghi (GPU 1): FA15 sweep at cfg 4.0 and 6.0 (same 4 sampling configs × 3 seeds), src/cfg_hi.sh.
 - kb (GPU 2): melody-only key bias on FA1 (A L1, no chord input, 10000 steps): `--key_bias b` adds b to the logit of pitches in the diatonic scale of the key estimated (Krumhansl-Schmuckler) from the melody prompt only; b = 1, 2, 4, T0.9 top_p0.9, seeds 0-2, src/sweep_keybias.sh. Uses no chord labels, so it is not metric-guided. Control: FA1 same sampling without bias.
+
+## 2026-10-12 results: FA15 CFG scales 4/6, melody-only key bias
+Configs as queued above; means over 3 sampling seeds × 10 prompts (rows in results/final/). Given-chord CA / pitch / vel / dur / IOI OA.
+FA15 cfg 4.0: pure 0.887 (OA 0.881/0.578/0.701/0.493), p0.95 0.896 (0.891/0.546/0.732/0.547), T0.9p0.9 0.896 (0.887/0.528/0.699/0.509), T1.2k5 0.858 (0.882/0.545/0.730/0.507). (One extra pure row 0.844 was written by an earlier version of gen_bonus.py before the key_bias field existed; the pure mean above is the post-edit rows.)
+FA15 cfg 6.0: pure 0.863 (0.857/0.512/0.660/0.507), p0.95 0.898, T0.9p0.9 0.875, T1.2k5 0.890. Saturates near 0.88–0.90 from cfg 3–4; at 6 pitch OA starts to drop (0.857). Full curve (pure): cfg1 0.558, 1.5 0.677, 2 0.760, 3 0.883, 4 0.887, 6 0.863.
+Key bias (FA1, melody-only, T0.9 p0.9, estimated key from melody prompt only): b=1 CA 0.173, b=2 0.179, b=4 0.140; control FA1 0.177. No effect on CA (OA unchanged: pitch 0.85–0.86). Key bias does not help.
