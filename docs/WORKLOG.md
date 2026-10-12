@@ -590,3 +590,13 @@ train_bonus.py `--chord_drop p`: with prob p all chord labels of a training exam
 
 ## 2026-10-12 velocity augmentation for Task a queued (F8)
 train_uncond.py `--vel_aug 2`: per crop shift all Vel tokens by random k in [-2,2] bins (4 MIDI-vel units/bin), plus ±1-bin jitter on 30% of notes. F8 = F1 protocol (p16, gpt2 8L×512, 20000 steps, dropout 0.3, full data, seed 0) + vel_aug 2; 3-seed sweep; tmux va, GPU 2, src/velaug_runs.sh. Compare against F1 seed 0-2 (H1/H4/GS 2.169/2.600/0.963 pure). Micro-timing augmentation not implemented (grid tokens; would break Pos alignment). FA15 (CFG) running on GPU 1.
+
+## 2026-10-12 results: FA15 (chord dropout 0.15 + CFG) and F8 (velocity aug)
+Configs as logged above; means over sampling seeds 0-2 × 10 bonus prompts; full config per row in results/final/results_FA15_*_cfg{1.0,1.5,2.0,3.0}.jsonl and results_F8_velaug2_p16_full_s*.jsonl.
+FA15 given-chord CA / OA pitch / vel / dur / IOI (pure; p0.95; T0.9p0.9; T1.2k5 for CA):
+- cfg 1.0: CA 0.558/0.598/0.637/0.538; pure OA 0.878/0.562/0.673/0.530
+- cfg 1.5: CA 0.677/0.744/0.719/0.704; pure OA 0.884/0.576/0.676/0.541
+- cfg 2.0: CA 0.760/0.771/0.744/0.777; pure OA 0.888/0.538/0.718/0.523
+- cfg 3.0: CA 0.883/0.835/0.883/0.838; pure OA 0.890/0.526/0.693/0.489
+CFG uses only the given chords (no metric-based selection). CA rises monotonically with scale; OA pitch/vel/dur/IOI stay in the same range (vel/IOI drift down a little at 3.0, single prompt set, differences of ~0.03 are within seed noise as seen in training-seed replicates). Without guidance the dropout-trained model is 0.54-0.64, i.e. dropout itself is not the gain. Notes/bar 15-19 (real piano density not re-measured here).
+F8 vel_aug 2, Task a (H1/H4/GS, mean of 3 sampling seeds): pure 2.203/2.582/0.957; p0.95 2.212/2.509/0.991; T0.9p0.9 2.171/2.489/0.996; T1.2k5 2.248/2.556/0.955; bias3 2.123/2.573/0.960. Reference F1 pure 2.169/2.600/0.963 (train-seed spread H4 2.600–2.646). Within training-seed spread: no measurable effect.

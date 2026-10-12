@@ -1,4 +1,5 @@
 # TODO — CommE5070 HW2
+- [x] 2026-10-12 CFG (FA15) done: CA 0.88 at scale 3, OA unchanged; vel_aug (F8) no effect. Remaining: learned reranker, key-aware bias, optional higher cfg scale / CFG on arch B.
 - [x] 2026-10-12 training-seed replicates (F1/FA12/F2) and chord aux loss (FA13/FA14) done, see WORKLOG; aux no gain.
 
 Deadline: 2026-10-26 23:59. Work one item at a time, log results/decisions in `WORKLOG.md` as you go.
