@@ -1,4 +1,5 @@
 # TODO — CommE5070 HW2
+- [ ] optional: F9 12-layer run in progress (tmux o12, GPU 1); then BPE merging, then MidiTok. Results go to results/optional/.
 - [x] Task b picks: 001 cfg1, 002 cfg3, 003 cfg3; report rebuilt. Left: replace the PDF in the Drive, NTU COOL comment, final proofread.
 - [x] Student ID R13921031; upload package at PA2/upload_package (600 MB). Left: upload to Drive (open access), put link on report slide 1 (report/build_deck.py CLOUD_LINK) + Task b best (TASKB_BEST), NTU COOL comment.
 - [x] Cloud link inserted on slide 1 (https://drive.google.com/drive/folders/19jENIBlJ3hmoRu9UIrka1VXZJrQdtPsP); report rebuilt. Left: Task b best picks, upload final PDF, NTU COOL comment.

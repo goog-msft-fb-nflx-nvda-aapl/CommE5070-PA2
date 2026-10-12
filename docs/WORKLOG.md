@@ -655,3 +655,6 @@ Reading (interpretation, proxies not quality): cfg2 stays closest to the prompt 
 
 ## 2026-10-12 Task b picks (author listening, single rater)
 Best per prompt: 001 cfg1, 002 cfg3, 003 cfg3 (the author had listened only to the 003 versions at first, then to 001/002). Slide 7 updated incl. the proxy-metric note (cfg3 repeats 42%/46% of bars on 001/003; picks differ from the proxy-metric favourite cfg2). survey_taskb/ (blind A/B/C) + SURVEY_TASKB.md were prepared but not used. PDF in upload_package/ updated; Drive copy to be replaced.
+
+## 2026-10-12 optional items started (results recorded under results/optional/ in the repo)
+F9: Task a, F1 protocol (p16, GPT-2, d512, 8 heads, dropout 0.3, 20000 steps, batch 8, all 896 songs, seed 0) with 12 layers (~42M params) instead of 8; 3-seed sweep with the same 5 sampling configs; tmux o12, GPU 1, src/opt_12L.sh. Compare with F1 (H1/H4/GS pure 2.169/2.600/0.963; training-seed spread of H4 ≈ 0.05). Next optional: BPE-style merging, then MidiTok.
