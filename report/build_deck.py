@@ -268,7 +268,7 @@ s = slide("Reproducibility, code reuse and references")
 bullets(s, ["Run: python infer.py uncond|continue|bonus --out_dir OUT (README); seeds fixed; a clean-environment test reproduced the objective metrics of the experiment runs to 4 decimals",
             "Every result row (results/*.jsonl) stores config, checkpoint hash, code hashes, seed",
             "TA scripts (tokenization.py, eval_basic.py, eval_bonus.py) are used unmodified; HF Transformers (GPT2LMHeadModel, T5ForConditionalGeneration, Llama config) with random initialisation; MusDr (Wu et al.) for GS/SI with a one-line librosa fix; pretty_midi, FluidSynth for .wav",
-            "Ideas followed (re-implemented by us, no code or weights copied): REMI (Huang & Yi, Pop Music Transformer, 2020); Compound Word Transformer (Hsiao et al., 2021); Compose & Embellish (Wu & Yang, 2023) for entropy matching / structureness; classifier-free guidance (Ho & Salimans, 2022); T5 (Raffel et al., 2020); RoPE (Su et al., 2021); POP909 (Wang et al., 2020)",
+            "Ideas followed (re-implemented by us, no code or weights copied): REMI (Huang & Yi, Pop Music Transformer, 2020); Compound Word Transformer (Hsiao et al., 2021); Compose & Embellish (Wu & Yang, 2023) for entropy matching / structureness; classifier-free guidance (Ho & Salimans, 2022); T5 (Raffel et al., 2020); RoPE (Su et al., 2021); BPE (Sennrich et al., 2016) and MidiTok (Fradet et al., 2021) for the optional runs on slide 12; Theme Transformer (Shih et al., 2022) as related conditioning work; POP909 (Wang et al., 2020)",
             "Released checkpoints: uncond_final.pt (F1), bonus_final.pt (F2) + bonus_stage1.pt (F3), bonus_chord_final.pt (FA15)"],
         0.55, 1.5, 12.2, 5.4, size=15, gap=10)
 
